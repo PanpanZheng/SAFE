@@ -3,39 +3,22 @@ from tensorflow.contrib import rnn
 import numpy as np
 import json
 
-def shuffle(X, T, C, pair_list):
-    t = np.arange(len(X))
-    s = np.arange(len(X))
-    np.random.shuffle(s)
-    t2s = dict(zip(s,t))
-    new_pair = list()
-    for i, pr in enumerate(pair_list):
-        new_pair.append([t2s[pr[0]],t2s[pr[1]]])
-    return np.array(X[s]), np.array(T[s]), np.array(C[s]), new_pair
+import sys
+sys.path.append("../")
+from safdKit import ran_seed, concordance_index
 
-def shuffle_pair(X):
-    s = np.arange(len(X))
-    np.random.shuffle(s)
-    return np.array(X[s])
-
-
-def ran_seed(N):
-    s = np.arange(N)
-    np.random.shuffle(s)
-    return s
 
 # parameters setting
 n_input = 5
 time_steps = 22
 n_classes = 1
 
-num_units = 128
-learning_rate = .00003
+num_units = 16
+learning_rate = .03
 
 batch_size = 128
-# dataset_size = 5000
-sigma = 3
-theta = 0.8
+sigma = 0.1
+theta = 0.5
 
 # convert lstm units to class probability.
 out_weights = tf.Variable(tf.random_normal([num_units, n_classes]))
@@ -96,8 +79,8 @@ loss_rank = tf.reduce_sum(
 train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle, var_list=para_list)
 train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank, var_list=para_list)
 loss = theta*loss_mle + (1-theta)*loss_rank
-# train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=para_list)
-train_mle_rank = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, var_list=para_list)
+train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=para_list)
+# train_mle_rank = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, var_list=para_list)
 
 
 # Input
@@ -136,8 +119,6 @@ i_off = [u2T[i]-1 for i in i_bases]
 i_index = i_bases*X_train.shape[1] + i_off
 j_index = j_bases*X_train.shape[1] + i_off
 
-
-
 X_test = np.load(dest_path + "X_test.npy")
 T_test = np.load(dest_path + "T_test.npy")
 C_test = np.load(dest_path + "C_test.npy")
@@ -159,7 +140,7 @@ sess.run(tf.global_variables_initializer())
 q = np.divide(len(X_train), batch_size)
 
 
-for n_epoch in range(10000):
+for n_epoch in range(100):
 
     ran_ind = ran_seed(i_index.shape[0])
     i_index = i_index[ran_ind]
@@ -182,12 +163,12 @@ for n_epoch in range(10000):
         #
         _, _loss, _loss_mle, _loss_rank = sess.run([train_mle_rank, loss, loss_mle, loss_rank],feed_dict={
                                             X: X_train,
-                                            X_bat: X_train[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            C: C_train[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            mle_mask: X_mask[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            mle_index: X_index[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            i_ind: i_index[n_batch * 10000:(n_batch+1) * 10000],
-                                            j_ind: j_index[n_batch * 10000:(n_batch+1) * 10000]})
+                                            X_bat: X_train[n_batch*batch_size:(n_batch+1)*batch_size],
+                                            C: C_train[n_batch*batch_size:(n_batch+1)*batch_size],
+                                            mle_mask: X_mask[n_batch*batch_size:(n_batch+1)*batch_size],
+                                            mle_index: X_index[n_batch*batch_size:(n_batch+1)*batch_size],
+                                            i_ind: i_index[n_batch*10000:(n_batch+1)*10000],
+                                            j_ind: j_index[n_batch*10000:(n_batch+1)*10000]})
 
     # print "epoch %s: %s" % (n_epoch, _loss_mle)
     #

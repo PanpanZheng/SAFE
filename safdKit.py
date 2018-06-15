@@ -175,3 +175,18 @@ def ErrHist(*args):
     plt.legend((p1[0], p2[0], p3[0]), ('cen_las_tim', 'cen_mis', 'uncensored'))
 
     plt.show()
+
+def censor_distri(x, y1, y2, col_line1, col_line2, lab_word1, lab_word2):
+
+    p1, = plt.plot(x, y1, col_line1, label=lab_word1)
+    p2, = plt.plot(x, y2, col_line2, label=lab_word2)
+    plt.legend(handles=[p1, p2])
+    plt.xlabel('time stamp')
+    plt.ylabel('percent')
+    plt.show()
+
+
+def ran_seed(N):
+    s = np.arange(N)
+    np.random.shuffle(s)
+    return s
