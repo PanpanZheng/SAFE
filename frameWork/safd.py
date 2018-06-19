@@ -6,11 +6,12 @@ import json
 import sys
 sys.path.append("../")
 from safdKit import ran_seed, concordance_index
+from sklearn.preprocessing import normalize
 
 
 # parameters setting
 n_input = 5
-time_steps = 22
+time_steps = 23
 n_classes = 1
 
 num_units = 16
@@ -58,7 +59,10 @@ loss_mle = tf.subtract(
                     tf.multiply(H_bat, mle_mask)),   # H_bat: partial,  mle_mask: partial.
                                     tf.reduce_sum(tf.multiply(
                                                 tf.log(
-                                                    tf.gather(tf.reshape(H, [-1]), mle_index)   #  hazard_series: whole,  mle_index partial
+                                                    tf.subtract(
+                                                            tf.exp(tf.gather(tf.reshape(H, [-1]), mle_index)), 1
+                                                    )
+                                                     #  hazard_series: whole,  mle_index partial
                                                 ),C  # C partial.
                                             )))
 
@@ -87,15 +91,19 @@ train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=p
 dest_path = "../Data/"
 
 X_train = np.load(dest_path + "X_train.npy")
+X_train = normalize(X_train.reshape(-1,X_train.shape[2]),norm='max',axis=0).reshape(X_train.shape[0],X_train.shape[1],-1)
+
 T_train = np.load(dest_path + "T_train.npy")
 C_train = np.load(dest_path + "C_train.npy")
 
 X_mask = np.zeros([X_train.shape[0], X_train.shape[1]])
 for v, t in zip(X_mask, T_train):
-    for i in range(t):
+    for i in range(t+1):
+    # for i in range(t):
         v[i] = 1
 X_bases = np.multiply(np.arange(X_train.shape[0]), X_train.shape[1])
-X_index = np.add(X_bases, np.subtract(T_train,1))
+X_index = np.add(X_bases, T_train)
+# X_index = np.add(X_bases, np.subtract(T_train,1))
 
 
 
@@ -120,6 +128,8 @@ i_index = i_bases*X_train.shape[1] + i_off
 j_index = j_bases*X_train.shape[1] + i_off
 
 X_test = np.load(dest_path + "X_test.npy")
+X_test = normalize(X_test.reshape(-1,X_test.shape[2]),norm='max',axis=0).reshape(X_test.shape[0],X_test.shape[1],-1)
+
 T_test = np.load(dest_path + "T_test.npy")
 C_test = np.load(dest_path + "C_test.npy")
 
@@ -176,7 +186,7 @@ for n_epoch in range(100):
 
     # print "epoch %s: %s %s" % (n_epoch, _loss_mle, _loss_rank)
 
-    # print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
+    print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
 
 
     _H = np.array(
@@ -203,14 +213,14 @@ for n_epoch in range(100):
     for hs in _H:
         T_pred.append(np.argmax(hs)+1)
 
-
-    print
-    print T_event[0:100]
-    print "-------------------"
-    print T_pred[0:100]
-    print
+    #
+    # print
+    # print T_event[0:100]
+    # print "-------------------"
+    # print T_pred[0:100]
+    # print
     mse = np.mean(np.abs(T_event-T_pred))
-    print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
+    # print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
 
 
 exit(0)
