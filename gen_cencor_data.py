@@ -121,13 +121,13 @@ with open(dest_path + 'cen_usr_mis_seq.json', 'w') as f:
 
 
 for u, v in uncen_usr_seq.items():
-    uncen_usr_seq[u][0] = pad_sequences(v[0], maxlen=22, padding="post")
+    uncen_usr_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
 
 for u, v in cen_usr_las_tim_seq.items():
-    cen_usr_las_tim_seq[u][0] = pad_sequences(v[0], maxlen=22, padding="post")
+    cen_usr_las_tim_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
 
 for u, v in cen_usr_mis_seq.items():
-    cen_usr_mis_seq[u][0] = pad_sequences(v[0], maxlen=22, padding="post")
+    cen_usr_mis_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
 
 
 # with open(dest_path + 'uncen_usr_seq_pad.json', 'w') as f:

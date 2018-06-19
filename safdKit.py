@@ -4,6 +4,8 @@ import pandas as pd
 from pandas import DataFrame as df
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from keras.preprocessing.sequence import pad_sequences
+
 
 def sample_shuffle_uspv(X,n):
 
@@ -70,6 +72,22 @@ def order_grpah(uncen_usr, cen_usr_las_tim, cen_usr_mis):
             if uncen_usr[usr_event] < cen_usr_mis[usr_po_desc]:
                 order_graph[usr_event].append(usr_po_desc)
     return order_graph
+
+
+def acc_pair_wtte(eve_T):
+
+    usr2T = dict()
+    for i, T in enumerate(eve_T):
+        usr2T[i] = T
+
+    acc_pair = list()
+    for usr_p in usr2T.keys():
+        for usr_d in usr2T.keys():
+            if usr_p != usr_d:
+                if usr2T[usr_p] < usr2T[usr_d]:
+                    acc_pair.append([usr_p,usr_d])
+    return np.array(acc_pair), usr2T
+
 
 
 def get_survival_time(sur_pro, thrld, time_stamp, usr_ts):
@@ -190,3 +208,39 @@ def ran_seed(N):
     s = np.arange(N)
     np.random.shuffle(s)
     return s
+
+
+
+def build_data(engine,time,x,max_time):
+
+    coll = []
+    for i in range(100):
+        max_engine_time = int(np.max(time[engine == i])) + 1
+        ran_ind = np.arange(max_engine_time)
+        np.random.shuffle(ran_ind)
+        sca_len = min(int(np.floor(max_engine_time/10)),22)
+        coll.append(
+            (x[engine == i])[sorted(ran_ind[0:sca_len])]
+        )
+
+    coll_pad = list()
+    T = list()
+    C = list()
+    for usr_rec in coll:
+        rec_len = len(usr_rec)
+        # print rec_len
+        for j in range(rec_len):
+            rec_step = (usr_rec[0:j+1]).tolist()
+            for steps in range(len(rec_step), max_time):
+                rec_step.append(np.zeros(24).tolist())
+            # print rec_step
+            coll_pad.append(rec_step)
+            T.append(rec_len)
+            C.append(1)
+
+    return np.array(coll_pad), np.array(T), np.array(C)
+
+
+def load_file(name):
+    with open(name, 'r') as file:
+        return np.loadtxt(file, delimiter=',')

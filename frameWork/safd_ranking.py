@@ -3,26 +3,11 @@ from tensorflow.contrib import rnn
 import numpy as np
 import json
 
-def shuffle(X, T, C, pair_list):
-    t = np.arange(len(X))
-    s = np.arange(len(X))
-    np.random.shuffle(s)
-    t2s = dict(zip(s,t))
-    new_pair = list()
-    for i, pr in enumerate(pair_list):
-        new_pair.append([t2s[pr[0]],t2s[pr[1]]])
-    return np.array(X[s]), np.array(T[s]), np.array(C[s]), new_pair
-
-def shuffle_pair(X):
-    s = np.arange(len(X))
-    np.random.shuffle(s)
-    return np.array(X[s])
+import sys
+sys.path.append("../")
+from safdKit import ran_seed, concordance_index
 
 
-def ran_seed(N):
-    s = np.arange(N)
-    np.random.shuffle(s)
-    return s
 
 # parameters setting
 n_input = 5
@@ -33,7 +18,6 @@ num_units = 128
 learning_rate = .00003
 
 batch_size = 128
-# dataset_size = 5000
 sigma = 3
 theta = 0.8
 
@@ -103,21 +87,23 @@ train_mle_rank = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss,
 # Input
 dest_path = "../Data/"
 
+
+# train setting
 X_train = np.load(dest_path + "X_train.npy")
 T_train = np.load(dest_path + "T_train.npy")
 C_train = np.load(dest_path + "C_train.npy")
 
-X_mask = np.zeros([X_train.shape[0], X_train.shape[1]])
-for v, t in zip(X_mask, T_train):
-    for i in range(t):
-        v[i] = 1
-X_bases = np.multiply(np.arange(X_train.shape[0]), X_train.shape[1])
-X_index = np.add(X_bases, np.subtract(T_train,1))
-
-
-
 acc_pair = json.load(open("../Data/acc_pair.json", "r"))
-pair_list = np.array([[int(i), j] for i, v in acc_pair.items() for j in v])
+pair_list = np.array([[int(i), j] for i, v in acc_pair.items() for j in v if j < 3000])
+
+X_train_event = list()
+T_train_event = list()
+for i, c in enumerate(C_train):
+    if c == 1:
+        X_train_event.append(X_train[i])
+        T_train_event.append(T_train[i])
+
+X_train_event, T_train_event = np.array(X_train_event), np.array(T_train_event)
 
 def usr2obsT(T):
     u2T = dict()
@@ -125,35 +111,47 @@ def usr2obsT(T):
         u2T[i] = t
     return u2T
 
-u2T = usr2obsT(T_train)
+u2T = usr2obsT(T_train_event)
 
 i_bases = pair_list[:,0]
 j_bases = pair_list[:,1]
 
 i_off = [u2T[i]-1 for i in i_bases]
-# j_off = [u2T[j]-1 for j in j_bases]
 
-i_index = i_bases*X_train.shape[1] + i_off
-j_index = j_bases*X_train.shape[1] + i_off
-
+i_index = i_bases*X_train_event.shape[1] + i_off
+j_index = j_bases*X_train_event.shape[1] + i_off
 
 
+
+# test setting
 X_test = np.load(dest_path + "X_test.npy")
 T_test = np.load(dest_path + "T_test.npy")
 C_test = np.load(dest_path + "C_test.npy")
 
-X_event, T_event, X_censor, T_censor = list(), list(), list(), list()
+
+X_test_event, T_test_event =  list(), list()
 for i, c in enumerate(C_test):
     if c == 1:
-        X_event.append(X_test[i])
-        T_event.append(T_test[i])
-    else:
-        X_censor.append(X_test[i])
-        T_censor.append(T_test[i])
-X_event, T_event, X_censor, T_censor = np.array(X_event), np.array(T_event), np.array(X_censor), np.array(T_censor)
+        X_test_event.append(X_test[i])
+        T_test_event.append(T_test[i])
+X_test_event, T_test_event = np.array(X_test_event), np.array(T_test_event)
+
+Acc_pair_test = list()
+for i, t_i in enumerate(T_test_event):
+    for j, t_j in enumerate(T_test_event):
+        if j <= i:
+            continue
+        if t_i < t_j:
+            Acc_pair_test.append([i,j])
+        elif t_i > t_j:
+            Acc_pair_test.append([j, i])
+
+Acc_pair_test = np.array(Acc_pair_test)
 
 
+print "-----------------------", Acc_pair_test.shape
 
+# training & testing
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 q = np.divide(len(X_train), batch_size)
@@ -167,46 +165,24 @@ for n_epoch in range(10000):
 
     for n_batch in range(q):
 
-        # _, _loss_mle = sess.run([train_mle, loss_mle],feed_dict={
-        #                                 X: X_train,
-        #                                 X_bat: X_train[n_batch * batch_size:(n_batch + 1) * batch_size],
-        #                                 C: C_train[n_batch * batch_size:(n_batch + 1) * batch_size],
-        #                                 mle_mask: X_mask[n_batch * batch_size:(n_batch + 1) * batch_size],
-        #                                 mle_index: X_index[n_batch * batch_size:(n_batch + 1) * batch_size]})
-        #
-        # _, _loss_rank = sess.run([train_rank, loss_rank],feed_dict={
-        #                         X: X_train,
-        #                         i_ind: i_index[n_batch * 10000:(n_batch + 1) * 10000],
-        #                         j_ind: j_index[n_batch * 10000:(n_batch + 1) * 10000]
-        #                         })
-        #
-        _, _loss, _loss_mle, _loss_rank = sess.run([train_mle_rank, loss, loss_mle, loss_rank],feed_dict={
-                                            X: X_train,
-                                            X_bat: X_train[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            C: C_train[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            mle_mask: X_mask[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            mle_index: X_index[n_batch * batch_size:(n_batch+1) * batch_size],
-                                            i_ind: i_index[n_batch * 10000:(n_batch+1) * 10000],
-                                            j_ind: j_index[n_batch * 10000:(n_batch+1) * 10000]})
+        _, _loss_rank = sess.run([train_rank, loss_rank],feed_dict={
+                                X: X_train,
+                                i_ind: i_index[n_batch * 10000:(n_batch + 1) * 10000],
+                                j_ind: j_index[n_batch * 10000:(n_batch + 1) * 10000]
+                                })
 
-    # print "epoch %s: %s" % (n_epoch, _loss_mle)
-    #
     # print "epoch %s: %s" % (n_epoch, _loss_rank)
 
-    # print "epoch %s: %s %s" % (n_epoch, _loss_mle, _loss_rank)
 
-    # print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
-
-
-    _H = np.array(
-        sess.run([H], feed_dict={X:X_event})
+    _H_test = np.array(
+        sess.run([H], feed_dict={X:X_test_event})
     )
-    _H = _H.reshape(_H.shape[1],_H.shape[2])
+    _H_test = _H_test.reshape(_H_test.shape[1],_H_test.shape[2])
 
 
     # threshold
     # T_pred = list()
-    # for hs in _H:
+    # for hs in _H_test:
     #     flag = True
     #     for i, h in enumerate(hs):
     #         if h > .35:
@@ -219,17 +195,28 @@ for n_epoch in range(10000):
 
     # max hazard
     T_pred = list()
-    for hs in _H:
+    for hs in _H_test:
         T_pred.append(np.argmax(hs)+1)
 
+    # MAE: Mean absolute error
+    # mse = np.mean(np.abs(T_test_event-T_pred))
+    # print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_test_event)
 
-    print
-    print T_event[0:100]
-    print "-------------------"
-    print T_pred[0:100]
-    print
-    mse = np.mean(np.abs(T_event-T_pred))
-    print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
+    # CI
+    # ci_count = (T_pred[Acc_pair_test[:,1]]>T_pred[Acc_pair_test[:,0]]).astype(int)
+
+    ci_count = 0
+    for p in Acc_pair_test:
+        if T_pred[p[1]] > T_pred[p[0]]:
+            ci_count += 1
+    # print ci_count
+    CI = ci_count/float(Acc_pair_test.shape[0])
+
+    print CI
+
+    # exit(0)
+
+
 
 
 exit(0)

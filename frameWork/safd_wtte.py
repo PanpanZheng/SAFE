@@ -5,12 +5,12 @@ import json
 
 import sys
 sys.path.append("../")
-from safdKit import ran_seed, concordance_index
+from safdKit import ran_seed, concordance_index, acc_pair_wtte
 from sklearn.preprocessing import normalize
 
 
 # parameters setting
-n_input = 5
+n_input = 24
 time_steps = 23
 n_classes = 1
 
@@ -90,11 +90,11 @@ train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=p
 # Input
 dest_path = "../Data/"
 
-X_train = np.load(dest_path + "X_train.npy")
+X_train = np.load(dest_path + "X_train_wtte.npy")
 X_train = normalize(X_train.reshape(-1,X_train.shape[2]),norm='max',axis=0).reshape(X_train.shape[0],X_train.shape[1],-1)
 
-T_train = np.load(dest_path + "T_train.npy")
-C_train = np.load(dest_path + "C_train.npy")
+T_train = np.load(dest_path + "T_train_wtte.npy")
+C_train = np.load(dest_path + "C_train_wtte.npy")
 
 X_mask = np.zeros([X_train.shape[0], X_train.shape[1]])
 for v, t in zip(X_mask, T_train):
@@ -103,35 +103,23 @@ for v, t in zip(X_mask, T_train):
         v[i] = 1
 X_bases = np.multiply(np.arange(X_train.shape[0]), X_train.shape[1])
 X_index = np.add(X_bases, T_train)
-# X_index = np.add(X_bases, np.subtract(T_train,1))
 
 
-
-acc_pair = json.load(open("../Data/acc_pair.json", "r"))
-pair_list = np.array([[int(i), j] for i, v in acc_pair.items() for j in v])
-
-def usr2obsT(T):
-    u2T = dict()
-    for i, t in enumerate(T):
-        u2T[i] = t
-    return u2T
-
-u2T = usr2obsT(T_train)
+pair_list, u2T = acc_pair_wtte(T_train)
 
 i_bases = pair_list[:,0]
 j_bases = pair_list[:,1]
 
 i_off = [u2T[i] for i in i_bases]
-# j_off = [u2T[j]-1 for j in j_bases]
 
 i_index = i_bases*X_train.shape[1] + i_off
 j_index = j_bases*X_train.shape[1] + i_off
 
-X_test = np.load(dest_path + "X_test.npy")
+X_test = np.load(dest_path + "X_test_wtte.npy")
 X_test = normalize(X_test.reshape(-1,X_test.shape[2]),norm='max',axis=0).reshape(X_test.shape[0],X_test.shape[1],-1)
 
-T_test = np.load(dest_path + "T_test.npy")
-C_test = np.load(dest_path + "C_test.npy")
+T_test = np.load(dest_path + "T_test_wtte.npy")
+C_test = np.load(dest_path + "C_test_wtte.npy")
 
 X_event, T_event, X_censor, T_censor = list(), list(), list(), list()
 for i, c in enumerate(C_test):
@@ -143,7 +131,9 @@ for i, c in enumerate(C_test):
         T_censor.append(T_test[i])
 X_event, T_event, X_censor, T_censor = np.array(X_event), np.array(T_event), np.array(X_censor), np.array(T_censor)
 
-
+# print X_event.shape, T_event.shape, X_censor.shape, T_censor.shape
+#
+# exit(0)
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
@@ -186,7 +176,7 @@ for n_epoch in range(100):
 
     # print "epoch %s: %s %s" % (n_epoch, _loss_mle, _loss_rank)
 
-    print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
+    # print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
 
 
     _H = np.array(
@@ -220,7 +210,7 @@ for n_epoch in range(100):
     # print T_pred[0:100]
     # print
     mse = np.mean(np.abs(T_event-T_pred))
-    # print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
+    print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
 
 
 exit(0)
