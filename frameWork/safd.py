@@ -161,7 +161,7 @@ for n_epoch in range(10000):
     ran_ind = ran_seed(i_index.shape[0])
     i_index = i_index[ran_ind]
     j_index = j_index[ran_ind]
-    q = np.divide(len(pair_list), 10000)
+    # q = np.divide(len(pair_list), 10000)
 
     for n_batch in range(q):
 
@@ -172,20 +172,65 @@ for n_epoch in range(10000):
         #                                 mle_mask: X_mask[n_batch * batch_size:(n_batch + 1) * batch_size],
         #                                 mle_index: X_index[n_batch * batch_size:(n_batch + 1) * batch_size]})
         #
-        _, _loss_rank = sess.run([train_rank, loss_rank],feed_dict={
-                                X: X_train,
-                                i_ind: i_index[n_batch * 10000:(n_batch + 1) * 10000],
-                                j_ind: j_index[n_batch * 10000:(n_batch + 1) * 10000]
-                                })
+        # _, _loss_rank = sess.run([train_rank, loss_rank],feed_dict={
+        #                         X: X_train,
+        #                         i_ind: i_index[n_batch * 10000:(n_batch + 1) * 10000],
+        #                         j_ind: j_index[n_batch * 10000:(n_batch + 1) * 10000]
+        #                         })
         #
-        # _, _loss, _loss_mle, _loss_rank = sess.run([train_mle_rank, loss, loss_mle, loss_rank],feed_dict={
-        #                                     X: X_train,
-        #                                     X_bat: X_train[n_batch*batch_size:(n_batch+1)*batch_size],
-        #                                     C: C_train[n_batch*batch_size:(n_batch+1)*batch_size],
-        #                                     mle_mask: X_mask[n_batch*batch_size:(n_batch+1)*batch_size],
-        #                                     mle_index: X_index[n_batch*batch_size:(n_batch+1)*batch_size],
-        #                                     i_ind: i_index[n_batch*10000:(n_batch+1)*10000],
-        #                                     j_ind: j_index[n_batch*10000:(n_batch+1)*10000]})
+
+
+        X_bat_train = X_train[n_batch * batch_size:(n_batch + 1) * batch_size]
+        T_bat_train = T_train[n_batch * batch_size:(n_batch + 1) * batch_size]
+        C_bat_train = C_train[n_batch * batch_size:(n_batch + 1) * batch_size]
+
+        _, _loss, _loss_mle, _loss_rank = sess.run([train_mle_rank, loss, loss_mle, loss_rank],feed_dict={
+                                            X: X_train,
+                                            X_bat: X_bat_train,
+                                            C: C_bat_train,
+                                            mle_mask: X_mask[n_batch*batch_size:(n_batch+1)*batch_size],
+                                            mle_index: X_index[n_batch*batch_size:(n_batch+1)*batch_size],
+                                            i_ind: i_index[n_batch*100000:(n_batch+1)*100000],
+                                            j_ind: j_index[n_batch*100000:(n_batch+1)*100000]})
+
+
+        _H_bat_train = np.array(
+            sess.run([H], feed_dict={X:X_bat_train})
+        )
+        _H_bat_train = _H_bat_train.reshape(_H_bat_train.shape[1],_H_bat_train.shape[2])
+
+
+        # threshold
+        # T_pred = list()
+        # for hs in _H:
+        #     flag = True
+        #     for i, h in enumerate(hs):
+        #         if h > .7:
+        #             T_pred.append(i+1)
+        #             flag = False
+        #             break
+        #     if flag:
+        #         T_pred.append(22)
+
+
+        # max hazard
+        T_pred_bat_train = list()
+        for hs in _H_bat_train:
+            T_pred_bat_train.append(np.argmax(hs)+1)
+
+        # CI
+        acc_pair_bat_train, usr2T_bat_train = acc_pair_wtte(T_bat_train)
+        count = 0
+        for p in acc_pair_bat_train:
+            if T_pred_bat_train[p[0]] < T_pred_bat_train[p[1]]:
+                count += 1
+
+        if len(acc_pair_bat_train) != 0:
+            CI_bat_train = count/float(len(acc_pair_bat_train))
+            mse_bat_train = np.mean(np.abs(T_bat_train-T_pred_bat_train))
+            print "batch %s (%s - %s): "%(n_batch,n_batch * batch_size,(n_batch + 1)*batch_size) , CI_bat_train, mse_bat_train, np.mean(T_pred_bat_train), np.mean(T_bat_train)
+
+
 
     # print "epoch %s: %s" % (n_epoch, _loss_mle)
     #
@@ -196,10 +241,11 @@ for n_epoch in range(10000):
     # print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
 
 
-    _H = np.array(
+
+    _H_test = np.array(
         sess.run([H], feed_dict={X:X_event})
     )
-    _H = _H.reshape(_H.shape[1],_H.shape[2])
+    _H_test = _H_test.reshape(_H_test.shape[1],_H_test.shape[2])
 
 
     # threshold
@@ -216,30 +262,21 @@ for n_epoch in range(10000):
 
 
     # max hazard
-    T_pred = list()
-    for hs in _H:
-        T_pred.append(np.argmax(hs)+1)
-
-    #
-    # print
-    # print T_event[0:100]
-    # print "-------------------"
-    # print T_pred[0:100]
-    # print
+    T_pred_test = list()
+    for hs in _H_test:
+        T_pred_test.append(np.argmax(hs)+1)
 
     # CI
     acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
     count = 0
     for p in acc_pair_test:
-        if T_pred[p[0]] < T_pred[p[1]]:
+        if T_pred_test[p[0]] < T_pred_test[p[1]]:
             count += 1
     CI = count/float(len(acc_pair_test))
-    # print CI
+    mse = np.mean(np.abs(T_event-T_pred_test))
 
-    print "epoch %s: %s, %s" % (n_epoch, _loss_rank, CI)
-    #
-    # mse = np.mean(np.abs(T_event-T_pred))
-    # print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
+    print "\n*** epoch %s"%n_epoch, CI, mse, np.mean(T_pred_test), np.mean(T_event)
+    print 
 
 
 exit(0)
