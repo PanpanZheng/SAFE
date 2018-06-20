@@ -5,7 +5,7 @@ import json
 
 import sys
 sys.path.append("../")
-from safdKit import ran_seed, concordance_index
+from safdKit import ran_seed, concordance_index, acc_pair_wtte
 from sklearn.preprocessing import normalize
 
 
@@ -18,12 +18,12 @@ num_units = 16
 learning_rate = .03
 
 batch_size = 128
-sigma = 0.1
+sigma = 0.01
 theta = 0.5
 
 # convert lstm units to class probability.
-out_weights = tf.Variable(tf.random_normal([num_units, n_classes]))
-out_bias = tf.Variable(tf.random_normal([n_classes]))
+out_weights = tf.Variable(tf.random_normal([num_units, n_classes]), trainable=True)
+out_bias = tf.Variable(tf.random_normal([n_classes]), trainable=True)
 para_list = [out_weights, out_bias]
 
 # input placeholder
@@ -69,7 +69,7 @@ loss_mle = tf.subtract(
 # loss_rank
 i_ind = tf.placeholder(tf.int32, shape=(None,))
 j_ind = tf.placeholder(tf.int32, shape=(None,))
-loss_rank = tf.reduce_sum(
+loss_rank = tf.reduce_mean(
                 tf.exp(
                     tf.divide(
                         tf.subtract(
@@ -80,10 +80,16 @@ loss_rank = tf.reduce_sum(
             )
 
 #train step
-train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle, var_list=para_list)
-train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank, var_list=para_list)
+train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle)
+train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank)
 loss = theta*loss_mle + (1-theta)*loss_rank
-train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=para_list)
+train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+
+
+# train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle, var_list=para_list)
+# train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank, var_list=para_list)
+# loss = theta*loss_mle + (1-theta)*loss_rank
+# train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=para_list)
 # train_mle_rank = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, var_list=para_list)
 
 
@@ -150,11 +156,12 @@ sess.run(tf.global_variables_initializer())
 q = np.divide(len(X_train), batch_size)
 
 
-for n_epoch in range(100):
+for n_epoch in range(10000):
 
     ran_ind = ran_seed(i_index.shape[0])
     i_index = i_index[ran_ind]
     j_index = j_index[ran_ind]
+    q = np.divide(len(pair_list), 10000)
 
     for n_batch in range(q):
 
@@ -165,20 +172,20 @@ for n_epoch in range(100):
         #                                 mle_mask: X_mask[n_batch * batch_size:(n_batch + 1) * batch_size],
         #                                 mle_index: X_index[n_batch * batch_size:(n_batch + 1) * batch_size]})
         #
-        # _, _loss_rank = sess.run([train_rank, loss_rank],feed_dict={
-        #                         X: X_train,
-        #                         i_ind: i_index[n_batch * 10000:(n_batch + 1) * 10000],
-        #                         j_ind: j_index[n_batch * 10000:(n_batch + 1) * 10000]
-        #                         })
+        _, _loss_rank = sess.run([train_rank, loss_rank],feed_dict={
+                                X: X_train,
+                                i_ind: i_index[n_batch * 10000:(n_batch + 1) * 10000],
+                                j_ind: j_index[n_batch * 10000:(n_batch + 1) * 10000]
+                                })
         #
-        _, _loss, _loss_mle, _loss_rank = sess.run([train_mle_rank, loss, loss_mle, loss_rank],feed_dict={
-                                            X: X_train,
-                                            X_bat: X_train[n_batch*batch_size:(n_batch+1)*batch_size],
-                                            C: C_train[n_batch*batch_size:(n_batch+1)*batch_size],
-                                            mle_mask: X_mask[n_batch*batch_size:(n_batch+1)*batch_size],
-                                            mle_index: X_index[n_batch*batch_size:(n_batch+1)*batch_size],
-                                            i_ind: i_index[n_batch*10000:(n_batch+1)*10000],
-                                            j_ind: j_index[n_batch*10000:(n_batch+1)*10000]})
+        # _, _loss, _loss_mle, _loss_rank = sess.run([train_mle_rank, loss, loss_mle, loss_rank],feed_dict={
+        #                                     X: X_train,
+        #                                     X_bat: X_train[n_batch*batch_size:(n_batch+1)*batch_size],
+        #                                     C: C_train[n_batch*batch_size:(n_batch+1)*batch_size],
+        #                                     mle_mask: X_mask[n_batch*batch_size:(n_batch+1)*batch_size],
+        #                                     mle_index: X_index[n_batch*batch_size:(n_batch+1)*batch_size],
+        #                                     i_ind: i_index[n_batch*10000:(n_batch+1)*10000],
+        #                                     j_ind: j_index[n_batch*10000:(n_batch+1)*10000]})
 
     # print "epoch %s: %s" % (n_epoch, _loss_mle)
     #
@@ -186,7 +193,7 @@ for n_epoch in range(100):
 
     # print "epoch %s: %s %s" % (n_epoch, _loss_mle, _loss_rank)
 
-    print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
+    # print "epoch %s: %s %s %s" % (n_epoch, _loss, _loss_mle, _loss_rank)
 
 
     _H = np.array(
@@ -200,7 +207,7 @@ for n_epoch in range(100):
     # for hs in _H:
     #     flag = True
     #     for i, h in enumerate(hs):
-    #         if h > .35:
+    #         if h > .7:
     #             T_pred.append(i+1)
     #             flag = False
     #             break
@@ -219,7 +226,19 @@ for n_epoch in range(100):
     # print "-------------------"
     # print T_pred[0:100]
     # print
-    mse = np.mean(np.abs(T_event-T_pred))
+
+    # CI
+    acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
+    count = 0
+    for p in acc_pair_test:
+        if T_pred[p[0]] < T_pred[p[1]]:
+            count += 1
+    CI = count/float(len(acc_pair_test))
+    # print CI
+
+    print "epoch %s: %s, %s" % (n_epoch, _loss_rank, CI)
+    #
+    # mse = np.mean(np.abs(T_event-T_pred))
     # print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
 
 
