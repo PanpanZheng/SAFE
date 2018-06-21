@@ -143,8 +143,6 @@ for n_epoch in range(100):
             i_index.append([x_p[0],usr2T_train[_x_p[0]]])
             j_index.append([x_p[1],usr2T_train[_x_p[0]]])
 
-        # i_index, j_index = np.array(i_index), np.array(j_index)
-
         _, _loss_rank, _lambdas = sess.run([train_rank_op, rank_loss, lambdas],feed_dict={
                                 X: X_train[n*batch_size:(n+1)*batch_size],
                                 rank_i_index:i_index,
@@ -157,35 +155,28 @@ for n_epoch in range(100):
             T_pred_train.append(np.argmax(hs))
         mae = np.mean(np.abs(T_train[n * batch_size:(n + 1) * batch_size]-T_pred_train))
         batch_mae.append(mae)
-        # print np.mean(rank_batch_loss), np.mean(batch_mae)
-        # exit(0)
 
-    print np.mean(rank_batch_loss), np.mean(batch_mae)
+    # print np.mean(rank_batch_loss), np.mean(batch_mae)
 
+    T_pred_test=[]
+    H = np.array(
+        sess.run([lambdas], feed_dict={X:X_event})
+    )
+    H = H.reshape(H.shape[1],H.shape[2])
+    for hs in H:
+        T_pred_test.append(np.argmax(hs))
 
-    # T_pred_test=[]
-    # H = np.array(
-    #     sess.run([lambdas], feed_dict={X:X_event, X_step:T_event})
-    # )
-    # H = H.reshape(H.shape[1],H.shape[2])
-    # for hs in H:
-    #     T_pred_test.append(np.argmax(hs))
-    #
-    #
-    #
-    # mae = np.mean(np.abs(T_event-T_pred_test))
-    #
-    # # print("epoch %s: %s %s %s" %(n_epoch, np.mean(mle_batch_loss), np.mean(batch_mae), mae))
+    mae = np.mean(np.abs(T_event-T_pred_test))
+
+    # print("epoch %s: %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(batch_mae), mae))
     # # print T_pred_test[0:20]
     # # print T_event[0:20]
     # # print
     # # print
-    #
-    #
-    # acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
-    # count = 0
-    # for p in acc_pair_test:
-    #     if T_pred_test[p[0]] < T_pred_test[p[1]]:
-    #         count += 1
-    # CI = count/float(len(acc_pair_test))
-    # print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(mle_batch_loss), np.mean(batch_mae), mae, CI))
+    acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
+    count = 0
+    for p in acc_pair_test:
+        if T_pred_test[p[0]] < T_pred_test[p[1]]:
+            count += 1
+    CI = count/float(len(acc_pair_test))
+    print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(batch_mae), mae, CI))
