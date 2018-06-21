@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.contrib import rnn
 import numpy as np
+import sys
+sys.path.append("../")
 
 from safdKit import ran_seed, concordance_index, acc_pair_wtte
 
@@ -15,7 +17,6 @@ learning_rate = .001
 batch_size = 128
 sigma = 0.1
 theta = 0.5
-
 
 # convert lstm units to class probability.
 out_weights = tf.Variable(tf.random_normal([num_units, n_classes]),trainable=True)
@@ -115,7 +116,6 @@ for n_epoch in range(100):
     # print
     # print
 
-    # # CI
 
     acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
     count = 0
@@ -123,16 +123,5 @@ for n_epoch in range(100):
         if T_pred_test[p[0]] < T_pred_test[p[1]]:
             count += 1
     CI = count/float(len(acc_pair_test))
-    print CI
-
-
-    # acc_pair_train, usr2T_train = acc_pair_wtte(T_train)
-    # count = 0
-    # for p in acc_pair_train:
-    #     if T_pred_train[p[0]] < T_pred_train[p[1]]:
-    #         count += 1
-
-    # if len(acc_pair_train) != 0:
-    #     CI_train = count/float(len(acc_pair_train))
-    #     mse_train = np.mean(np.abs(T_train-T_pred_train))
-    #     print("epoch %s: "%n_epoch, CI_train, mse_train, np.mean(T_pred_train), np.mean(T_train))
+    # print CI
+    print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(mle_batch_loss), np.mean(batch_mae), mae, CI))
