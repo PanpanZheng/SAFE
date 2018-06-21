@@ -46,12 +46,12 @@ mle_loss = tf.reduce_mean(
 )
 
 
-# rank_i_index = tf.placeholder(tf.int32, shape=(None, 2), name='i_index')
-# rank_j_index = tf.placeholder(tf.int32, shape=(None, 2), name='j_index')
+rank_i_index = tf.placeholder(tf.int32, shape=(None, 2), name='i_index')
+rank_j_index = tf.placeholder(tf.int32, shape=(None, 2), name='j_index')
 
 
-rank_i_index = tf.placeholder(tf.int32, shape=(5561, 2), name='i_index')
-rank_j_index = tf.placeholder(tf.int32, shape=(5561, 2), name='j_index')
+# rank_i_index = tf.placeholder(tf.int32, shape=(5561, 2), name='i_index')
+# rank_j_index = tf.placeholder(tf.int32, shape=(5561, 2), name='j_index')
 
 rank_loss = tf.reduce_mean(
                 tf.exp(
@@ -135,16 +135,15 @@ for n_epoch in range(100):
 
 
         _X_pair = pick_up_pair([n*batch_size,(n+1)*batch_size], acc_pair_train)
+        if len(_X_pair) == 0:
+            continue
         X_pair = [[p[0]%batch_size, p[1]%batch_size] for p in _X_pair]
         i_index, j_index= list(), list()
         for x_p, _x_p in zip(X_pair, _X_pair):
             i_index.append([x_p[0],usr2T_train[_x_p[0]]])
             j_index.append([x_p[1],usr2T_train[_x_p[0]]])
 
-        i_index, j_index = np.array(i_index), np.array(j_index)
-        # print
-        # print i_index.shape, j_index.shape
-        # exit(0)
+        # i_index, j_index = np.array(i_index), np.array(j_index)
 
         _, _loss_rank, _lambdas = sess.run([train_rank_op, rank_loss, lambdas],feed_dict={
                                 X: X_train[n*batch_size:(n+1)*batch_size],
@@ -158,8 +157,8 @@ for n_epoch in range(100):
             T_pred_train.append(np.argmax(hs))
         mae = np.mean(np.abs(T_train[n * batch_size:(n + 1) * batch_size]-T_pred_train))
         batch_mae.append(mae)
-        print np.mean(rank_batch_loss), np.mean(batch_mae)
-        exit(0)
+        # print np.mean(rank_batch_loss), np.mean(batch_mae)
+        # exit(0)
 
     print np.mean(rank_batch_loss), np.mean(batch_mae)
 
