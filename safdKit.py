@@ -89,6 +89,23 @@ def acc_pair_wtte(eve_T):
     return np.array(acc_pair), usr2T
 
 
+def acc_pair(T, C):
+
+    usr2T = dict()
+    for i, t in enumerate(T):
+        usr2T[i] = t
+
+    i_uncen = np.arange(T.shape[0])[C==1]
+
+    acc_pair = list()
+    for usr_p in i_uncen:
+        for usr_d in np.arange(T.shape[0]):
+            if usr_p != usr_d:
+                if usr2T[usr_p] < usr2T[usr_d]:
+                    acc_pair.append([usr_p,usr_d])
+    return np.array(acc_pair), usr2T
+
+
 
 def get_survival_time(sur_pro, thrld, time_stamp, usr_ts):
 
@@ -244,3 +261,16 @@ def build_data(engine,time,x,max_time):
 def load_file(name):
     with open(name, 'r') as file:
         return np.loadtxt(file, delimiter=',')
+
+def in_interval(itv, x):
+    if itv[0]<=x<itv[1]:
+        return True
+    else:
+        return False
+
+def pick_up_pair(val_ran, acc_pair):
+    pair_coll = list()
+    for p in acc_pair:
+        if in_interval(val_ran, p[0]) and in_interval(val_ran, p[1]):
+            pair_coll.append(p)
+    return pair_coll
