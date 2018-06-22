@@ -4,7 +4,7 @@ import numpy as np
 import sys
 sys.path.append("../")
 
-from safdKit import ran_seed, concordance_index, acc_pair_wtte, in_interval,pick_up_pair, acc_pair
+from safdKit import ran_seed, concordance_index, acc_pair_wtte, in_interval,pick_up_pair, acc_pair, cut_seq
 
 # parameters setting
 n_input = 5
@@ -64,8 +64,6 @@ rank_loss = tf.reduce_mean(
                     )
                 )
 
-
-
 #for mle
 train_mle = tf.train.AdamOptimizer(learning_rate)
 m_gvs = train_mle.compute_gradients(mle_loss)
@@ -88,6 +86,21 @@ X_train = np.load(dest_path + "X_train.npy")
 T_train = np.load(dest_path + "T_train.npy")
 C_train = np.load(dest_path + "C_train.npy")
 
+X_train_C = np.array(X_train.tolist())
+cut_seq(X_train_C,T_train,n_input,0.8)
+
+X_train = X_train.tolist() + X_train_C.tolist()
+T_train = T_train.tolist() + T_train.tolist()
+C_train = C_train.tolist() + C_train.tolist()
+
+
+X_train, T_train, C_train = np.array(X_train), np.array(T_train), np.array(C_train)
+
+s = ran_seed(X_train.shape[0])
+X_train, T_train, C_train = X_train[s], T_train[s], C_train[s]
+# print X_train.shape, T_train.shape, C_train.shape
+# exit(0)
+
 X_mask = np.zeros([X_train.shape[0], X_train.shape[1]])
 for v, t in zip(X_mask, T_train):
     for i in range(t+1):
@@ -109,6 +122,8 @@ for i, c in enumerate(C_test):
         X_censor.append(X_test[i])
         T_censor.append(T_test[i])
 X_event, T_event, X_censor, T_censor = np.asarray(X_event), np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+# X_event_C = np.array(X_event.tolist())
+cut_seq(X_event,T_event,n_input,0.8)
 
 acc_pair_test, usr2T_test = acc_pair(T_event,np.ones(T_event.shape[0]))
 
@@ -120,9 +135,10 @@ n_batch = int(np.divide(len(X_train), batch_size))
 ds = n_batch*batch_size
 X_train, C_train, T_train, X_mask = X_train[:ds], C_train[:ds], T_train[:ds], X_mask[:ds]
 
+
 for n_epoch in range(100):
     rank_batch_loss = []
-    batch_mae = []
+    # batch_mae = []
     for n in range(n_batch):
 
         # _, _loss_mle, _lambdas = sess.run([train_mle_op, mle_loss, lambdas],feed_dict={
@@ -150,13 +166,14 @@ for n_epoch in range(100):
         })
 
         rank_batch_loss.append(_loss_rank)
-        T_pred_train = []
-        for hs in _lambdas:
-            T_pred_train.append(np.argmax(hs))
-        mae = np.mean(np.abs(T_train[n * batch_size:(n + 1) * batch_size]-T_pred_train))
-        batch_mae.append(mae)
+        # T_pred_train = []
+        # for hs in _lambdas:
+        #     T_pred_train.append(np.argmax(hs))
+        # mae = np.mean(np.abs(T_train[n * batch_size:(n + 1) * batch_size]-T_pred_train))
+        # batch_mae.append(mae)
 
     # print np.mean(rank_batch_loss), np.mean(batch_mae)
+
 
     T_pred_test=[]
     H = np.array(
@@ -173,10 +190,11 @@ for n_epoch in range(100):
     # # print T_event[0:20]
     # # print
     # # print
+
     acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
     count = 0
     for p in acc_pair_test:
         if T_pred_test[p[0]] < T_pred_test[p[1]]:
             count += 1
     CI = count/float(len(acc_pair_test))
-    print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(batch_mae), mae, CI))
+    print("epoch %s: %s %s %s" %(n_epoch, np.mean(rank_batch_loss), mae, CI))

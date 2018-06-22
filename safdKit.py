@@ -274,3 +274,9 @@ def pick_up_pair(val_ran, acc_pair):
         if in_interval(val_ran, p[0]) and in_interval(val_ran, p[1]):
             pair_coll.append(p)
     return pair_coll
+
+def cut_seq(X,T,dim,ratio):
+    for x, t in zip(X,T):
+        for i in np.arange(int(t*ratio),t):
+            x[i]= np.zeros(dim).tolist()
+    # return X
