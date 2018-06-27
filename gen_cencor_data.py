@@ -1,7 +1,7 @@
 import numpy as np
 import json
 from collections import defaultdict
-from safdKit import sample_shuffle_uspv, order_grpah
+from safdKit import sample_shuffle_uspv, order_grpah, pad_sequences_last_elem, pad_sequences_mean
 from keras.preprocessing.sequence import pad_sequences
 
 
@@ -85,25 +85,38 @@ cen_usr_mis_seq = defaultdict(list)
 
 
 for usr in uncen_usr.keys():
-    uncen_usr_seq[usr]\
-        = [[map(int, followers_count[usr]), map(int,friends_count[usr]),
-            map(int, listed_count[usr]),map(int, favourites_count[usr]),map(int,statuses_count[usr])],
-           uncen_usr[usr],
-           1]
+    try:
+        uncen_usr_seq[usr]\
+            = [[map(int, followers_count[usr]), map(int,friends_count[usr]),
+                map(int, listed_count[usr]),map(int, favourites_count[usr]), map(int,statuses_count[usr])],
+               uncen_usr[usr],
+               1]
+    except ValueError:
+        print usr, followers_count[usr],friends_count[usr], listed_count[usr], favourites_count[usr], statuses_count[usr],  uncen_usr[usr]
+        exit(0)
 
 for usr in cen_usr_las_tim.keys():
-    cen_usr_las_tim_seq[usr]\
-        = [[map(int,followers_count[usr]), map(int,friends_count[usr]), map(int,listed_count[usr]),
-            map(int,favourites_count[usr]),map(int,statuses_count[usr])],
-           cen_usr_las_tim[usr],
-           0]
+    try:
+        cen_usr_las_tim_seq[usr]\
+            = [[map(int,followers_count[usr]), map(int,friends_count[usr]), map(int,listed_count[usr]),
+                map(int,favourites_count[usr]),map(int,statuses_count[usr])],
+               cen_usr_las_tim[usr],
+               0]
+    except ValueError:
+        print usr, followers_count[usr], friends_count[usr], listed_count[usr], favourites_count[usr], statuses_count[usr],  cen_usr_las_tim[usr]
+        exit(0)
 
 for usr in cen_usr_mis.keys():
-    cen_usr_mis_seq[usr]\
-        = [[map(int, followers_count[usr][:cen_usr_mis[usr]]), map(int,friends_count[usr][:cen_usr_mis[usr]]), map(int,listed_count[usr][:cen_usr_mis[usr]]),
-            map(int, favourites_count[usr][:cen_usr_mis[usr]]),map(int, statuses_count[usr][:cen_usr_mis[usr]])],
-           cen_usr_mis[usr],
-           0]
+    try:
+        cen_usr_mis_seq[usr]\
+            = [[map(int, followers_count[usr][:cen_usr_mis[usr]]), map(int,friends_count[usr][:cen_usr_mis[usr]]), map(int,listed_count[usr][:cen_usr_mis[usr]]),
+                map(int, favourites_count[usr][:cen_usr_mis[usr]]),map(int, statuses_count[usr][:cen_usr_mis[usr]])],
+               cen_usr_mis[usr],
+               0]
+    except ValueError:
+        print usr, followers_count[usr][:cen_usr_mis[usr]], friends_count[usr][:cen_usr_mis[usr]], listed_count[usr][:cen_usr_mis[usr]], \
+                favourites_count[usr][:cen_usr_mis[usr]], statuses_count[usr][:cen_usr_mis[usr]], cen_usr_mis[usr]
+        exit(0)
 
 with open(dest_path + 'uncen_usr_seq.json', 'w') as f:
     json.dump(uncen_usr_seq, f)
@@ -121,13 +134,19 @@ with open(dest_path + 'cen_usr_mis_seq.json', 'w') as f:
 
 
 for u, v in uncen_usr_seq.items():
-    uncen_usr_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    # uncen_usr_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    # uncen_usr_seq[u][0] = pad_sequences_last_elem(v[0],23)
+    uncen_usr_seq[u][0] = pad_sequences_mean(v[0], 23)
 
 for u, v in cen_usr_las_tim_seq.items():
-    cen_usr_las_tim_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    # cen_usr_las_tim_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    # cen_usr_las_tim_seq[u][0] = pad_sequences_last_elem(v[0],23)
+    cen_usr_las_tim_seq[u][0] = pad_sequences_mean(v[0], 23)
 
 for u, v in cen_usr_mis_seq.items():
-    cen_usr_mis_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    # cen_usr_mis_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    # cen_usr_mis_seq[u][0] = pad_sequences_last_elem(v[0],23)
+    cen_usr_mis_seq[u][0] = pad_sequences_mean(v[0],23)
 
 
 # with open(dest_path + 'uncen_usr_seq_pad.json', 'w') as f:
@@ -207,15 +226,15 @@ T_test = T[3000:4000] + T[5000:5500] + T[8000:8500]
 C_test = C[3000:4000] + C[5000:5500] + C[8000:8500]
 U_test = UU[3000:4000] + UU[5000:5500] + UU[8000:8500]
 
-np.save(dest_path + "X_train",X_train)
-np.save(dest_path + "T_train",T_train)
-np.save(dest_path + "C_train",C_train)
-np.save(dest_path + "U_train",U_train)
+np.save(dest_path + "X_train_pad_mean",X_train)
+np.save(dest_path + "T_train_pad_mean",T_train)
+np.save(dest_path + "C_train_pad_mean",C_train)
+np.save(dest_path + "U_train_pad_mean",U_train)
 
-np.save(dest_path + "X_test",X_test)
-np.save(dest_path + "T_test",T_test)
-np.save(dest_path + "C_test",C_test)
-np.save(dest_path + "U_test",U_test)
+np.save(dest_path + "X_test_pad_mean",X_test)
+np.save(dest_path + "T_test_pad_mean",T_test)
+np.save(dest_path + "C_test_pad_mean",C_test)
+np.save(dest_path + "U_test_pad_mean",U_test)
 
 uncen_usr_f = json.load(open("./Data/uncen_usr.json", "r"))
 cen_usr_las_tim_f = json.load(open("./Data/cen_usr_las_tim.json", "r"))

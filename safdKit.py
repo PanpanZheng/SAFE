@@ -280,3 +280,58 @@ def cut_seq(X,T,dim,ratio):
         for i in np.arange(int(t*ratio),t):
             x[i]= np.zeros(dim).tolist()
     # return X
+
+
+def cut_seq_last_0(X,T,dim,ratio):
+    X_cut = list()
+    for x, t in zip(X, T):
+        L = len(x)
+        x = x[:int(t*ratio)]
+        # last_ele = x[-1]
+        for _ in np.arange(int(t*ratio),L):
+            x.append(np.zeros(dim).tolist())
+        X_cut.append(x)
+    return np.array(X_cut)
+
+
+def cut_seq_last(X,T,ratio):
+    X_cut = list()
+    for x, t in zip(X, T):
+        L = len(x)
+        x = x[:int(t*ratio)]
+        last_ele = x[-1]
+        for _ in np.arange(int(t*ratio),L):
+            x.append(last_ele)
+        X_cut.append(x)
+    return np.array(X_cut)
+
+
+def cut_seq_mean(X,T,ratio):
+    X_cut = list()
+    for x, t in zip(X, T):
+        L = len(x)
+        x = x[:int(t*ratio)]
+        mean_vac = np.mean(x,axis=0).tolist()
+        for _ in np.arange(int(t*ratio),L):
+            x.append(mean_vac)
+        X_cut.append(x)
+    return np.array(X_cut)
+
+
+def pad_sequences_last_elem(X,L):
+    X_p = list()
+    for eles in X:
+        for _ in np.arange(len(eles),L):
+            eles.append(eles[-1])
+        X_p.append(eles)
+    return np.array(X_p)
+
+
+def pad_sequences_mean(X,L):
+    X_p = list()
+    for eles in X:
+        ave = np.mean(eles)
+        for _ in np.arange(len(eles),L):
+            eles.append(ave)
+        X_p.append(eles)
+    return np.array(X_p)
