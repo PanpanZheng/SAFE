@@ -4,7 +4,7 @@ import numpy as np
 import sys
 sys.path.append("../")
 
-from safdKit import ran_seed, concordance_index, acc_pair_wtte, in_interval,pick_up_pair, acc_pair, cut_seq
+from safdKit import ran_seed, concordance_index, acc_pair_wtte, in_interval,pick_up_pair, acc_pair, cut_seq, cut_seq_last, cut_seq_0, cut_seq_mean
 
 # parameters setting
 n_input = 5
@@ -82,24 +82,43 @@ train_rank_op = train_rank.apply_gradients(r_capped_gvs)
 # load data
 dest_path = "../Data/"
 
-X_train = np.load(dest_path + "X_train.npy")
-T_train = np.load(dest_path + "T_train.npy")
-C_train = np.load(dest_path + "C_train.npy")
+pad_med = sys.argv[1]
+tra_ful_mixed = sys.argv[2]
+tes_ful_par = sys.argv[3]
 
-X_train_C = np.array(X_train.tolist())
-cut_seq(X_train_C,T_train,n_input,0.8)
+if pad_med == "0":
+    X_train = np.load(dest_path + "X_train_pad_0.npy")
+    T_train = np.load(dest_path + "T_train_pad_0.npy")
+    C_train = np.load(dest_path + "C_train_pad_0.npy")
+elif pad_med == "last":
+    X_train = np.load(dest_path + "X_train_pad_last.npy")
+    T_train = np.load(dest_path + "T_train_pad_last.npy")
+    C_train = np.load(dest_path + "C_train_pad_last.npy")
+elif pad_med == "mean":
+    X_train = np.load(dest_path + "X_train_pad_mean.npy")
+    T_train = np.load(dest_path + "T_train_pad_mean.npy")
+    C_train = np.load(dest_path + "C_train_pad_mean.npy")
 
-X_train = X_train.tolist() + X_train_C.tolist()
-T_train = T_train.tolist() + T_train.tolist()
-C_train = C_train.tolist() + C_train.tolist()
+if tra_ful_mixed == "mix":
+
+    X_train_C = list()
+    for x in X_train:
+        X_train_C.append(x.tolist())
+
+    X_train_C = np.array(X_train.tolist())
+    X_train_C = cut_seq_last(X_train_C, T_train, 0.5)
+    X_train_C = cut_seq_mean(X_train_C, T_train, 0.5)
+
+    X_train = X_train.tolist() + X_train_C.tolist()
+    T_train = T_train.tolist() + T_train.tolist()
+    C_train = C_train.tolist() + C_train.tolist()
 
 
-X_train, T_train, C_train = np.array(X_train), np.array(T_train), np.array(C_train)
+    X_train, T_train, C_train = np.array(X_train), np.array(T_train), np.array(C_train)
 
-s = ran_seed(X_train.shape[0])
-X_train, T_train, C_train = X_train[s], T_train[s], C_train[s]
-# print X_train.shape, T_train.shape, C_train.shape
-# exit(0)
+    s = ran_seed(X_train.shape[0])
+    X_train, T_train, C_train = X_train[s], T_train[s], C_train[s]
+
 
 X_mask = np.zeros([X_train.shape[0], X_train.shape[1]])
 for v, t in zip(X_mask, T_train):
@@ -109,21 +128,48 @@ for v, t in zip(X_mask, T_train):
 
 acc_pair_train, usr2T_train = acc_pair(T_train,C_train)
 
-X_test = np.load(dest_path + "X_test.npy")
-T_test = np.load(dest_path + "T_test.npy")
-C_test = np.load(dest_path + "C_test.npy")
+
+if pad_med == "0":
+    X_test = np.load(dest_path + "X_test_pad_0.npy")
+    T_test = np.load(dest_path + "T_test_pad_0.npy")
+    C_test = np.load(dest_path + "C_test_pad_0.npy")
+elif pad_med == "last":
+    X_test = np.load(dest_path + "X_test_pad_last.npy")
+    T_test = np.load(dest_path + "T_test_pad_last.npy")
+    C_test = np.load(dest_path + "C_test_pad_last.npy")
+elif pad_med == "mean":
+    X_test = np.load(dest_path + "X_test_pad_mean.npy")
+    T_test = np.load(dest_path + "T_test_pad_mean.npy")
+    C_test = np.load(dest_path + "C_test_pad_mean.npy")
+
 
 X_event, T_event, X_censor, T_censor = [], [], [], []
 for i, c in enumerate(C_test):
     if c == 1:
-        X_event.append(X_test[i])
-        T_event.append(T_test[i])
+        X_event.append(X_test[i].tolist())
+        T_event.append(T_test[i].tolist())
     else:
-        X_censor.append(X_test[i])
-        T_censor.append(T_test[i])
-X_event, T_event, X_censor, T_censor = np.asarray(X_event), np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
-# X_event_C = np.array(X_event.tolist())
-cut_seq(X_event,T_event,n_input,0.8)
+        X_censor.append(X_test[i].tolist())
+        T_censor.append(T_test[i].tolist())
+
+if tes_ful_par == "full":
+    X_event, T_event, X_censor, T_censor = np.asarray(X_event), np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+elif pad_med == "0" and tes_ful_par == "partial":
+    T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+    X_event = cut_seq_0(X_event,T_event,n_input,0.5)
+elif pad_med == "last" and tes_ful_par == "partial":
+    T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+    X_event = cut_seq_last(X_event, T_event, 0.5)
+elif pad_med == "mean" and tes_ful_par == "partial":
+    T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+    X_event = cut_seq_mean(X_event, T_event, 0.5)
+
+# T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+# X_event = cut_seq_last_0(X_event,T_event,5, 0.5)
+
+# T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
+# X_event = cut_seq_last(X_event,T_event, 0.5)
+# X_event = cut_seq_mean(X_event,T_event, 0.5)
 
 acc_pair_test, usr2T_test = acc_pair(T_event,np.ones(T_event.shape[0]))
 
@@ -136,18 +182,19 @@ ds = n_batch*batch_size
 X_train, C_train, T_train, X_mask = X_train[:ds], C_train[:ds], T_train[:ds], X_mask[:ds]
 
 
-for n_epoch in range(100):
+for n_epoch in range(30):
     rank_batch_loss = []
+    mle_batch_loss = []
     # batch_mae = []
     for n in range(n_batch):
 
-        # _, _loss_mle, _lambdas = sess.run([train_mle_op, mle_loss, lambdas],feed_dict={
-        #                         X: X_train[n * batch_size:(n + 1) * batch_size],
-        #                         C: C_train[n * batch_size:(n + 1) * batch_size],
-        #                         X_step: T_train[n * batch_size:(n + 1) * batch_size],
-        #                         mle_mask: X_mask[n * batch_size:(n + 1) * batch_size],
-        #                         mle_index: np.vstack((np.arange(batch_size), T_train[n * batch_size:(n + 1) * batch_size])).T
-        # })
+        _, _loss_mle, _lambdas_mle = sess.run([train_mle_op, mle_loss, lambdas],feed_dict={
+                                X: X_train[n * batch_size:(n + 1) * batch_size],
+                                C: C_train[n * batch_size:(n + 1) * batch_size],
+                                # X_step: T_train[n * batch_size:(n + 1) * batch_size],
+                                mle_mask: X_mask[n * batch_size:(n + 1) * batch_size],
+                                mle_index: np.vstack((np.arange(batch_size), T_train[n * batch_size:(n + 1) * batch_size])).T
+        })
 
 
         _X_pair = pick_up_pair([n*batch_size,(n+1)*batch_size], acc_pair_train)
@@ -159,13 +206,14 @@ for n_epoch in range(100):
             i_index.append([x_p[0],usr2T_train[_x_p[0]]])
             j_index.append([x_p[1],usr2T_train[_x_p[0]]])
 
-        _, _loss_rank, _lambdas = sess.run([train_rank_op, rank_loss, lambdas],feed_dict={
+        _, _loss_rank, _lambdas_rank = sess.run([train_rank_op, rank_loss, lambdas],feed_dict={
                                 X: X_train[n*batch_size:(n+1)*batch_size],
                                 rank_i_index:i_index,
                                 rank_j_index:j_index
         })
 
         rank_batch_loss.append(_loss_rank)
+        mle_batch_loss.append(_loss_mle)
         # T_pred_train = []
         # for hs in _lambdas:
         #     T_pred_train.append(np.argmax(hs))
@@ -197,4 +245,4 @@ for n_epoch in range(100):
         if T_pred_test[p[0]] < T_pred_test[p[1]]:
             count += 1
     CI = count/float(len(acc_pair_test))
-    print("epoch %s: %s %s %s" %(n_epoch, np.mean(rank_batch_loss), mae, CI))
+    print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(mle_batch_loss), mae, CI))
