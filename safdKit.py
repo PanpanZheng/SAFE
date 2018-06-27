@@ -282,7 +282,7 @@ def cut_seq(X,T,dim,ratio):
     # return X
 
 
-def cut_seq_last_0(X,T,dim,ratio):
+def cut_seq_0(X,T,dim,ratio):
     X_cut = list()
     for x, t in zip(X, T):
         L = len(x)
