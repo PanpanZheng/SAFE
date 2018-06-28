@@ -82,9 +82,14 @@ train_rank_op = train_rank.apply_gradients(r_capped_gvs)
 # load data
 dest_path = "../Data/"
 
-pad_med = sys.argv[1]
-tra_ful_mixed = sys.argv[2]
-tes_ful_par = sys.argv[3]
+# pad_med = sys.argv[1]
+# tra_ful_mixed = sys.argv[2]
+# tes_ful_par = sys.argv[3]
+
+
+pad_med = "0"
+tra_ful_mixed = "full"
+tes_ful_par = "partial"
 
 if pad_med == "0":
     X_train = np.load(dest_path + "X_train_pad_0.npy")
@@ -156,13 +161,19 @@ if tes_ful_par == "full":
     X_event, T_event, X_censor, T_censor = np.asarray(X_event), np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
 elif pad_med == "0" and tes_ful_par == "partial":
     T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
-    X_event = cut_seq_0(X_event,T_event,n_input,0.5)
+    X_event, dis_len, cut_points = cut_seq_0(X_event,T_event,n_input,0.5)
+    # print dis_len
+    # exit(0)
 elif pad_med == "last" and tes_ful_par == "partial":
     T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
-    X_event = cut_seq_last(X_event, T_event, 0.5)
+    X_event, dis_len, cut_points = cut_seq_last(X_event, T_event, 0.5)
+    # print dis_len
+    # exit(0)
 elif pad_med == "mean" and tes_ful_par == "partial":
     T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
-    X_event = cut_seq_mean(X_event, T_event, 0.5)
+    X_event, dis_len, cut_points = cut_seq_mean(X_event, T_event, 0.5)
+    # print dis_len
+    # exit(0)
 
 # T_event, X_censor, T_censor = np.asarray(T_event), np.asarray(X_censor), np.asarray(T_censor)
 # X_event = cut_seq_last_0(X_event,T_event,5, 0.5)
@@ -222,22 +233,38 @@ for n_epoch in range(30):
 
     # print np.mean(rank_batch_loss), np.mean(batch_mae)
 
-
     T_pred_test=[]
     H = np.array(
         sess.run([lambdas], feed_dict={X:X_event})
     )
     H = H.reshape(H.shape[1],H.shape[2])
     for hs in H:
-        T_pred_test.append(np.argmax(hs))
+        T_pred_test.append(np.argmax(hs)+1)
 
     mae = np.mean(np.abs(T_event-T_pred_test))
+    T_pred_test = np.array(T_pred_test)
+    print "epoch %s"%n_epoch
+    print "early detection: ", np.sum(T_pred_test<=T_event)
+    print "delayed detection: ", np.sum(T_pred_test>T_event)
+    print "early detection steps: ", np.mean(T_event[T_pred_test<=T_event]-T_pred_test[T_pred_test<=T_event])
+    print
+    print
+
+    print "comparing with cut points: "
+    print "after: ", np.sum(cut_points<T_pred_test)
+    print "before: ", np.sum(cut_points > T_pred_test)
+    print "= : ", np.sum(cut_points == T_pred_test)
+
+    print "after cut_points steps: ", np.mean(T_pred_test[cut_points<T_pred_test]-cut_points[cut_points<T_pred_test])
+    print
+    print
 
     # print("epoch %s: %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(batch_mae), mae))
-    # # print T_pred_test[0:20]
-    # # print T_event[0:20]
-    # # print
-    # # print
+    print cut_points[0:20]
+    print T_pred_test[0:20]
+    print T_event[0:20]
+    print
+    print
 
     acc_pair_test, usr2T_test = acc_pair_wtte(T_event)
     count = 0
@@ -245,4 +272,4 @@ for n_epoch in range(30):
         if T_pred_test[p[0]] < T_pred_test[p[1]]:
             count += 1
     CI = count/float(len(acc_pair_test))
-    print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(mle_batch_loss), mae, CI))
+    # print("epoch %s: %s %s %s %s" %(n_epoch, np.mean(rank_batch_loss), np.mean(mle_batch_loss), mae, CI))
