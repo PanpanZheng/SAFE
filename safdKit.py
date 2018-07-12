@@ -5,7 +5,7 @@ from pandas import DataFrame as df
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from keras.preprocessing.sequence import pad_sequences
-
+from sklearn import tree, ensemble, neighbors, svm, covariance
 
 def sample_shuffle_uspv(X,n):
 
@@ -284,38 +284,46 @@ def cut_seq(X,T,dim,ratio):
 
 def cut_seq_0(X,T,dim,ratio):
     X_cut = list()
+    coll_len = list()
+    cut_points = list()
     for x, t in zip(X, T):
         L = len(x)
         x = x[:int(t*ratio)]
+        coll_len.append(t-int(t*ratio))
+        cut_points.append(int(t*ratio))
         # last_ele = x[-1]
         for _ in np.arange(int(t*ratio),L):
             x.append(np.zeros(dim).tolist())
         X_cut.append(x)
-    return np.array(X_cut)
+    return np.array(X_cut), np.mean(coll_len), np.array(cut_points)
 
 
 def cut_seq_last(X,T,ratio):
     X_cut = list()
+    coll_len = list()
     for x, t in zip(X, T):
         L = len(x)
         x = x[:int(t*ratio)]
         last_ele = x[-1]
+        coll_len.append(t - int(t * ratio))
         for _ in np.arange(int(t*ratio),L):
             x.append(last_ele)
         X_cut.append(x)
-    return np.array(X_cut)
+    return np.array(X_cut),np.mean(coll_len)
 
 
 def cut_seq_mean(X,T,ratio):
     X_cut = list()
+    coll_len = list()
     for x, t in zip(X, T):
         L = len(x)
         x = x[:int(t*ratio)]
+        coll_len.append(t - int(t * ratio))
         mean_vac = np.mean(x,axis=0).tolist()
         for _ in np.arange(int(t*ratio),L):
             x.append(mean_vac)
         X_cut.append(x)
-    return np.array(X_cut)
+    return np.array(X_cut), np.mean(coll_len)
 
 
 def pad_sequences_last_elem(X,L):
@@ -335,3 +343,55 @@ def pad_sequences_mean(X,L):
             eles.append(ave)
         X_p.append(eles)
     return np.array(X_p)
+
+def survival(hs):
+    return np.exp(-np.sum(hs))
+
+def lambda2Survival(H):
+    sur_coll = list()
+    for i, h in enumerate(H):
+        sur_coll.append(survival(H[0:i+1]))
+    return np.array(sur_coll)
+
+
+def k_NN(X,y):
+	clf = neighbors.KNeighborsClassifier(n_neighbors=3)
+	return clf.fit(X,y)
+
+def decision_tree(X,y):
+	clf = tree.DecisionTreeClassifier()
+	return clf.fit(X, y)
+
+def random_forest(X,y):
+	clf = ensemble.RandomForestClassifier(n_estimators=10)
+	return clf.fit(X,y)
+
+def svm_svc(X,y):
+	clf = svm.SVC()
+	return clf.fit(X,y)
+
+def svm_nusvc(X,y):
+	clf = svm.NuSVC()
+	return clf.fit(X,y)
+
+def svm_linearsvc(X,y):
+	clf = svm.LinearSVC()
+	return clf.fit(X,y)
+
+def svm_oneclass(X):
+	clf = svm.OneClassSVM()
+	return clf.fit(X)
+
+def elliptic_envelope(X):
+	clf = covariance.EllipticEnvelope()
+	return clf.fit(X)
+
+def upp_tri_mat(M):
+    # n = M.shape[0]
+    for i, r_m in enumerate(M):
+        for j, m in enumerate(r_m):
+            if j <= i:
+                r_m[j] = 1
+            else:
+                break
+    return np.transpose(M)
