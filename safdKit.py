@@ -395,3 +395,9 @@ def upp_tri_mat(M):
             else:
                 break
     return np.transpose(M)
+
+def draw_x_y(x,y):
+    p1, = plt.plot(x, y, 'bo-', label='uncensor')
+    plt.xlabel('time stamp')
+    plt.ylabel('percent')
+    plt.show()
