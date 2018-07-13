@@ -22,8 +22,8 @@ sigma = 0.1
 theta = 0.5
 
 # convert lstm units to class probability.
-out_weights = tf.Variable(tf.random_normal([num_units, n_classes]))
-out_bias = tf.Variable(tf.random_normal([n_classes]))
+out_weights = tf.Variable(tf.random_normal([num_units, n_classes]),trainable=True)
+out_bias = tf.Variable(tf.random_normal([n_classes]),trainable=True)
 para_list = [out_weights, out_bias]
 
 # input placeholder
@@ -80,10 +80,17 @@ loss_rank = tf.reduce_sum(
             )
 
 #train step
-train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle, var_list=para_list)
-train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank, var_list=para_list)
+train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle)
+train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank)
 loss = theta*loss_mle + (1-theta)*loss_rank
-train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=para_list)
+train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+
+
+# train_mle = tf.train.AdamOptimizer(learning_rate).minimize(loss_mle, var_list=para_list)
+# train_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss_rank, var_list=para_list)
+# loss = theta*loss_mle + (1-theta)*loss_rank
+# train_mle_rank = tf.train.AdamOptimizer(learning_rate).minimize(loss, var_list=para_list)
+
 # train_mle_rank = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, var_list=para_list)
 
 
@@ -140,7 +147,7 @@ sess.run(tf.global_variables_initializer())
 q = np.divide(len(X_train), batch_size)
 
 
-for n_epoch in range(100):
+for n_epoch in range(10000):
 
     ran_ind = ran_seed(i_index.shape[0])
     i_index = i_index[ran_ind]
@@ -170,6 +177,8 @@ for n_epoch in range(100):
                                             i_ind: i_index[n_batch*10000:(n_batch+1)*10000],
                                             j_ind: j_index[n_batch*10000:(n_batch+1)*10000]})
 
+
+
     # print "epoch %s: %s" % (n_epoch, _loss_mle)
     #
     # print "epoch %s: %s" % (n_epoch, _loss_rank)
@@ -186,22 +195,22 @@ for n_epoch in range(100):
 
 
     # threshold
-    # T_pred = list()
-    # for hs in _H:
-    #     flag = True
-    #     for i, h in enumerate(hs):
-    #         if h > .35:
-    #             T_pred.append(i+1)
-    #             flag = False
-    #             break
-    #     if flag:
-    #         T_pred.append(22)
+    T_pred = list()
+    for hs in _H:
+        flag = True
+        for i, h in enumerate(hs):
+            if h > .5:
+                T_pred.append(i+1)
+                flag = False
+                break
+        if flag:
+            T_pred.append(22)
 
 
     # max hazard
-    T_pred = list()
-    for hs in _H:
-        T_pred.append(np.argmax(hs)+1)
+    # T_pred = list()
+    # for hs in _H:
+    #     T_pred.append(np.argmax(hs)+1)
 
     #
     # print
@@ -210,6 +219,7 @@ for n_epoch in range(100):
     # print T_pred[0:100]
     # print
     mse = np.mean(np.abs(T_event-T_pred))
+    # exit(0)
     print "epoch: %s"%n_epoch, mse, np.mean(T_pred), np.mean(T_event)
 
 

@@ -10,6 +10,7 @@ from sklearn.metrics import classification_report, accuracy_score
 
 # parameters setting
 n_input = 5
+# time_steps = 22
 time_steps = 21
 n_classes = 1
 
@@ -170,6 +171,7 @@ for ss in Survival:
         unc_cen.append(0)
 
 unc_cen = np.array(unc_cen)
+C_test = C_test[T_test != 1]
 unc_cen_acc = accuracy_score(C_test, unc_cen)
 unc_det_acc = np.sum(unc_cen[C_test == 1])/float(np.sum(np.array(unc_cen)==1))
 print "censor or uncensor ? : ", unc_cen_acc

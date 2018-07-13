@@ -276,7 +276,7 @@ for n_epoch in range(10000):
     mse = np.mean(np.abs(T_event-T_pred_test))
 
     print "\n*** epoch %s"%n_epoch, CI, mse, np.mean(T_pred_test), np.mean(T_event)
-    print 
+    print
 
 
 exit(0)

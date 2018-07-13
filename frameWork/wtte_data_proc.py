@@ -6,7 +6,7 @@ from keras.preprocessing.sequence import pad_sequences
 from sklearn.preprocessing import normalize
 import sys
 sys.path.append("../")
-from safdKit import ran_seed, concordance_index, build_data, load_file, acc_pair_wtte
+from safdKit import ran_seed, concordance_index, build_data, load_file, acc_pair_wtte, in_interval, pick_up_pair
 
 
 
