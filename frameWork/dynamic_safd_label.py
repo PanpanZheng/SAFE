@@ -10,7 +10,7 @@ from sklearn.metrics import classification_report, accuracy_score
 
 # parameters setting
 n_input = 5
-time_steps = 22
+time_steps = 21
 n_classes = 1
 
 num_units = 32
@@ -19,7 +19,7 @@ learning_rate = .001
 sigma = 2
 theta = 0.5
 
-sur_thrld = 0.5
+sur_thrld = 0.3
 
 out_weights = tf.Variable(tf.random_normal([num_units, n_classes]),trainable=True)
 out_bias = tf.Variable(tf.random_normal([n_classes]),trainable=True)
@@ -34,6 +34,7 @@ outputs, _ = tf.nn.dynamic_rnn(cell=gru_cell, inputs=X, dtype="float32")
 
 lambdas = tf.reshape(
             tf.nn.softplus(tf.matmul(tf.reshape(outputs,[-1,num_units]),out_weights)+ out_bias),
+            # tf.nn.sigmoid(tf.matmul(tf.reshape(outputs,[-1,num_units]),out_weights)+ out_bias),
             [batch_size, -1])
 
 mle_loss = tf.reduce_mean(
@@ -67,7 +68,16 @@ train_supervised_op = train_supervised.apply_gradients(s_capped_gvs)
 
 
 # load data
-dest_path = "../Data2/"
+dest_path = "../Data3/"
+# dest_path = "../Data2/"
+
+X_train = np.load(dest_path + "X_train_var.npy")
+T_train = np.load(dest_path + "T_train_var.npy")
+C_train = np.load(dest_path + "C_train_var.npy")
+
+X_test = np.load(dest_path + "X_test_var.npy")
+T_test = np.load(dest_path + "T_test_var.npy")
+C_test = np.load(dest_path + "C_test_var.npy")
 
 # X_train = np.load(dest_path + "X_train_diff.npy")
 # T_train = np.load(dest_path + "T_train_diff.npy")
@@ -77,21 +87,19 @@ dest_path = "../Data2/"
 # T_test = np.load(dest_path + "T_test_diff.npy")
 # C_test = np.load(dest_path + "C_test_diff.npy")
 
-
-X_train = np.load(dest_path + "X_train_np.npy")
-T_train = np.load(dest_path + "T_train.npy")
-C_train = np.load(dest_path + "C_train.npy")
-
-X_test = np.load(dest_path + "X_test_np.npy")
-T_test = np.load(dest_path + "T_test.npy")
-C_test = np.load(dest_path + "C_test.npy")
-
+# X_train = np.load(dest_path + "X_train_np.npy")
+# T_train = np.load(dest_path + "T_train.npy")
+# C_train = np.load(dest_path + "C_train.npy")
+#
+# X_test = np.load(dest_path + "X_test_np.npy")
+# T_test = np.load(dest_path + "T_test.npy")
+# C_test = np.load(dest_path + "C_test.npy")
 
 session = tf.Session()
 session.run(tf.global_variables_initializer())
 
 
-num_epoches = 1000
+num_epoches = 300
 
 for n_epoch in range(num_epoches):
 
@@ -102,18 +110,14 @@ for n_epoch in range(num_epoches):
         bat_X = X_train[T_train == (n+1)].tolist()
         bat_C = C_train[T_train == (n+1)].tolist()
         bat_size = np.sum(T_train == (n+1)).astype(int)
+        if bat_size == 0:
+            continue
 
         _, _mle_loss, _lambdas = session.run([train_mle_op, mle_loss, lambdas],feed_dict={
                                 X: bat_X,
                                 C: bat_C,
                                 mle_index: (np.vstack((np.arange(bat_size), np.zeros(bat_size)+n)).T).astype(int).tolist(),
                                 batch_size: bat_size
-                                # X: X_train[T_train == (n+1)].tolist(),
-                                # C: C_train[T_train == (n+1)].tolist(),
-                                # mle_index: (np.vstack((np.arange(np.sum(T_train == (n+1))), np.zeros(np.sum(T_train == (n+1)))+n)).T).astype(int).tolist(),
-                                # batch_size: np.sum(T_train == (n+1)).astype(int)
-
-
         })
 
         tri_mat = upp_tri_mat(np.zeros((n+1, n+1)))
@@ -134,101 +138,42 @@ for n_epoch in range(num_epoches):
 
     print "epoch: ", n_epoch, _mle_loss, _supervised_loss
     # print "epoch: ", n_epoch, _mle_loss
+    # print "epoch: ", n_epoch, _supervised_loss
 
-
-_lambdas_test = list()
+Survival = list()
 for n in range(time_steps):
-    print "=== %s"%(n+1)
     if n == 0:
         continue
-    tri_mat = upp_tri_mat(np.zeros((n + 1, n + 1)))
-    H, S = session.run([lambdas, survivals],
-                       feed_dict={X: X_test[T_test == (n + 1)].tolist(),
-                                  batch_size: np.sum(T_test == (n + 1)).astype(int),
-                                  mask: tri_mat})
+    tri_mat = upp_tri_mat(np.zeros((n+1, n+1)))
+    bat_size = np.sum(T_test == (n+1)).astype(int)
+    if bat_size == 0:
+        continue
+    _survivals = session.run([survivals],
+                               feed_dict={X: X_test[T_test == (n+1)].tolist(),
+                                          batch_size: bat_size,
+                                          mask: tri_mat})
 
-    H, S = np.array(H), np.array(S)
-    for h, s in zip(H,S):
-        print h, ": ", s
-    # print H.shape, S.shape
-    # exit(0)
-    # H = H.reshape(H.shape[1], H.shape[2])
-    # _lambdas_test.append(H)
+    _survivals = np.array(_survivals)
+    _survivals = _survivals.reshape(_survivals.shape[1],_survivals.shape[2])
+    Survival.extend(_survivals)
 
-# survivals_test = list()
-# X_group = list()
-# for i, _lambdas_group in enumerate(_lambdas_test):
-#     X_group.extend(X_test[T_test==(i+1)].tolist())
-#     for H in _lambdas_group:
-#         survivals_test.append(lambda2Survival(H))
+unc_cen = list()
+for ss in Survival:
+    event_flag = False
+    for s in ss:
+        if s <= sur_thrld:
+            event_flag = True
+            break
+    if event_flag:
+        unc_cen.append(1)
+    else:
+        unc_cen.append(0)
 
-# for s, x in zip(survivals_test, X_group):
-#     print s, "  ", x
+unc_cen = np.array(unc_cen)
+unc_cen_acc = accuracy_score(C_test, unc_cen)
+unc_det_acc = np.sum(unc_cen[C_test == 1])/float(np.sum(np.array(unc_cen)==1))
+print "censor or uncensor ? : ", unc_cen_acc
+print "given uncensor above, the true uncensor accuracy: ", unc_det_acc
+
+
 exit(0)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# censor_detect_test = list()
-# suspended_candidate_survival_test = list()
-# suspended_candidate_survival_time_test = list()
-# for j, survival in enumerate(survivals_test):
-#     flag = True
-#     for i in range(time_steps-1):
-#         if survival[i] <= sur_thrld:
-#             censor_detect_test.append(i+1)
-#             suspended_candidate_survival_test.append(survival)
-#             suspended_candidate_survival_time_test.append(Sur_Time_test[j])
-#             flag = False
-#             break
-#     if flag:
-#         censor_detect_test.append(time_steps)
-#
-# censor_detected_rate_test = np.sum((np.array(censor_detect_test)==23)==(C_test==0))/float(np.array(censor_detect_test).shape[0])
-#
-# sus_detect_test = list()
-# for j, survival in enumerate(suspended_candidate_survival_test):
-#     if suspended_candidate_survival_time_test[j] == 23:
-#         continue
-#     flag = True
-#     for i in range(suspended_candidate_survival_time_test[j]):
-#         if survival[i] <= sur_thrld:
-#             sus_detect_test.append(i+1)
-#             flag = False
-#             break
-#     if flag:
-#         sus_detect_test.append(-1)
-#
-# acc_valid_test = np.sum(np.array(sus_detect_test)!=-1)/float(np.array(sus_detect_test).shape[0])
-#
-# print "censor_detect_rate: ", censor_detected_rate_test
-# print "suspend_detect_rate: ", acc_valid_test
