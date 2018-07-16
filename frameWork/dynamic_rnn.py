@@ -36,34 +36,85 @@ train_supervised_op = train_supervised.apply_gradients(s_capped_gvs)
 
 
 # load data
-dest_path = "../Data3/"
+source1 = "../Data3/"
+source2 = "../Data4/"
 
-X_train_12 = np.load(dest_path + "X_train_12.npy")
-X_test_12 = np.load(dest_path + "X_test_12.npy")
+X_train_12 = np.load(source1 + "X_train_12.npy")
+X_test_12 = np.load(source1 + "X_test_12.npy")
 
-X_train_17 = np.load(dest_path + "X_train_17.npy")
-X_test_17 = np.load(dest_path + "X_test_17.npy")
+X_train_17 = np.load(source1 + "X_train_17.npy")
+X_test_17 = np.load(source1 + "X_test_17.npy")
 
-X_train_18 = np.load(dest_path + "X_train_18.npy")
-X_test_18 = np.load(dest_path + "X_test_18.npy")
+X_train_18 = np.load(source1 + "X_train_18.npy")
+X_test_18 = np.load(source1 + "X_test_18.npy")
 
-X_train_19 = np.load(dest_path + "X_train_19.npy")
-X_test_19 = np.load(dest_path + "X_test_19.npy")
+X_train_19 = np.load(source1 + "X_train_19.npy")
+X_test_19 = np.load(source1 + "X_test_19.npy")
 
-X_train_21 = np.load(dest_path + "X_train_21.npy")
-X_test_21 = np.load(dest_path + "X_test_21.npy")
+X_train_1_21 = np.load(source1 + "X_train_21.npy")
+X_test_1_21 = np.load(source1 + "X_test_21.npy")
+
+X_train_2_21 = np.load(source2 + "X_train_21.npy")
+X_train_9 = np.load(source2 + "X_train_9.npy")
+X_train_8 = np.load(source2 + "X_train_8.npy")
+X_train_7 = np.load(source2 + "X_train_7.npy")
+X_train_6 = np.load(source2 + "X_train_6.npy")
+X_train_5 = np.load(source2 + "X_train_5.npy")
+X_train_4 = np.load(source2 + "X_train_4.npy")
+X_train_3 = np.load(source2 + "X_train_3.npy")
+X_train_2 = np.load(source2 + "X_train_2.npy")
+X_train_1 = np.load(source2 + "X_train_1.npy")
+
+X_test_2_21 = np.load(source2 + "X_test_21.npy")
+X_test_9 =np.load(source2 + "X_test_9.npy")
+X_test_8 =np.load(source2 + "X_test_8.npy")
+X_test_7 =np.load(source2 + "X_test_7.npy")
+X_test_6 =np.load(source2 + "X_test_6.npy")
+X_test_5 =np.load(source2 + "X_test_5.npy")
+X_test_4 =np.load(source2 + "X_test_4.npy")
+X_test_3 =np.load(source2 + "X_test_3.npy")
+X_test_2 =np.load(source2 + "X_test_2.npy")
+X_test_1 =np.load(source2 + "X_test_1.npy")
+
+
+
+X_train_21 = np.concatenate((X_train_1_21,X_train_2_21))
+X_test_21 = np.concatenate((X_test_1_21,X_test_2_21))
+
+# print X_test_1.shape, X_test_2.shape, X_test_3.shape, X_test_4.shape, X_test_5.shape,X_test_6.shape, \
+#     X_test_7.shape,X_test_8.shape, X_test_9.shape, X_test_12.shape, X_test_17.shape, X_test_18.shape,X_test_19.shape,X_test_21.shape
+#
+# exit(0)
 
 
 session = tf.Session()
 session.run(tf.global_variables_initializer())
 
-num_epoches = 500
+num_epoches = 700
 
 for n_epoch in range(num_epoches):
 
-    for i in [12,17,18,19,21]:
+    for i in [1,2,3,4,5,6,7,8,9,12,17,18,19,21]:
 
-        if i == 12:
+        if i == 1:
+            bat_X = X_train_1
+        elif i == 2:
+            bat_X = X_train_2
+        elif i == 3:
+            bat_X = X_train_3
+        elif i == 4:
+            bat_X = X_train_4
+        elif i == 5:
+            bat_X = X_train_5
+        elif i == 6:
+            bat_X = X_train_6
+        elif i == 7:
+            bat_X = X_train_7
+        elif i == 8:
+            bat_X = X_train_8
+        elif i == 9:
+            bat_X = X_train_9
+        elif i == 12:
             bat_X = X_train_12
         elif i == 17:
             bat_X = X_train_17
@@ -81,7 +132,7 @@ for n_epoch in range(num_epoches):
         else:
             bat_y = np.zeros(bat_size)
 
-        _, _mse_loss, _y_pred = session.run([train_supervised_op, mse_loss, y_pred],feed_dict={
+        _, _mse_loss = session.run([train_supervised_op, mse_loss],feed_dict={
                                 X: bat_X,
                                 y_true: bat_y,
                                 batch_size: bat_size
@@ -89,11 +140,31 @@ for n_epoch in range(num_epoches):
 
     print "epoch: ", n_epoch, _mse_loss
 
+
+# exit(0)
 _y_pred_test = list()
 
-for i in [12, 17, 18, 19, 21]:
+for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 17, 18, 19,21]:
 
-    if i == 12:
+    if i == 1:
+        bat_X = X_test_1
+    elif i == 2:
+        bat_X = X_test_2
+    elif i == 3:
+        bat_X = X_test_3
+    elif i == 4:
+        bat_X = X_test_4
+    elif i == 5:
+        bat_X = X_test_5
+    elif i == 6:
+        bat_X = X_test_6
+    elif i == 7:
+        bat_X = X_test_7
+    elif i == 8:
+        bat_X = X_test_8
+    elif i == 9:
+        bat_X = X_test_9
+    elif i == 12:
         bat_X = X_test_12
     elif i == 17:
         bat_X = X_test_17
@@ -105,7 +176,6 @@ for i in [12, 17, 18, 19, 21]:
         bat_X = X_test_21
 
     bat_size = bat_X.shape[0]
-
     _y_pred = session.run([y_pred], feed_dict={
         X: bat_X,
         batch_size: bat_size
@@ -114,7 +184,7 @@ for i in [12, 17, 18, 19, 21]:
     _y_pred = np.array(_y_pred).reshape((bat_size,))
     _y_pred_test.extend(_y_pred)
 
-_y_test = np.concatenate((np.ones(240),np.zeros(240)))
+_y_test = np.concatenate((np.ones(632),np.zeros(632)))
 _y_pred_test = np.array(_y_pred_test)
 _y_pred_test = (np.array(_y_pred_test)>0.5).astype(int)
 acc = accuracy_score(_y_test, _y_pred_test)

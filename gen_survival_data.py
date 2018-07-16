@@ -6,7 +6,7 @@ from keras.preprocessing.sequence import pad_sequences
 
 
 source_path = "../Twitter/Data/"
-dest_path = "./Data2/"
+dest_path = "./ori_data/"
 
 # users & labels
 users, labels =  np.load(source_path + "extract_data/users.npy"), np.load(source_path + "extract_data/labels.npy")
@@ -47,10 +47,10 @@ for usr in cen_usr:
         cen_usr.remove(usr)
 
 for u, v in uncen_usr_seq.items():
-    uncen_usr_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    uncen_usr_seq[u][0] = pad_sequences(v[0], maxlen=22, padding="post")
 
 for u, v in cen_usr_seq.items():
-    cen_usr_seq[u][0] = pad_sequences(v[0], maxlen=23, padding="post")
+    cen_usr_seq[u][0] = pad_sequences(v[0], maxlen=22, padding="post")
 
 
 UU_uncen = list()
@@ -91,17 +91,13 @@ X_uncen_sampling = list()
 T_uncen_sampling = list()
 C_uncen_sampling = list()
 
+
+
 for t in set(T_uncen):
-    if np.sum(T_uncen == t) > 200:
-        UU_uncen_sampling.extend(UU_uncen[T_uncen == t][0:200])
-        X_uncen_sampling.extend(X_uncen[T_uncen == t][0:200])
-        T_uncen_sampling.extend(T_uncen[T_uncen == t][0:200])
-        C_uncen_sampling.extend(C_uncen[T_uncen == t][0:200])
-    else:
-        UU_uncen_sampling.extend(UU_uncen[T_uncen == t])
-        X_uncen_sampling.extend(X_uncen[T_uncen == t])
-        T_uncen_sampling.extend(T_uncen[T_uncen == t])
-        C_uncen_sampling.extend(C_uncen[T_uncen == t])
+    UU_uncen_sampling.extend(UU_uncen[T_uncen == t])
+    X_uncen_sampling.extend(X_uncen[T_uncen == t])
+    T_uncen_sampling.extend(T_uncen[T_uncen == t])
+    C_uncen_sampling.extend(C_uncen[T_uncen == t])
 
 UU_uncen_sampling, X_uncen_sampling, \
                 T_uncen_sampling, C_uncen_sampling = np.array(UU_uncen_sampling), np.array(X_uncen_sampling), \
@@ -112,8 +108,8 @@ U_train, X_train, T_train, C_train = list(), list(), list(), list()
 U_valid, X_valid, T_valid, C_valid = list(), list(), list(), list()
 U_test, X_test, T_test, C_test = list(), list(), list(), list()
 
-train_ratio = 0.5
-valid_ratio = 0.2
+train_ratio = 0.7
+valid_ratio = 0.1
 
 for t in set(T_uncen_sampling):
 
@@ -166,9 +162,9 @@ U_valid, X_valid, T_valid, C_valid = np.array(U_valid), np.array(X_valid), np.ar
 U_test, X_test, T_test, C_test = np.array(U_test), np.array(X_test), np.array(T_test), np.array(C_test)
 
 
-U_train, X_train, T_train, C_train = U_train[0:3000], X_train[0:3000], T_train[0:3000], C_train[0:3000]
-U_valid, X_valid, T_valid, C_valid = U_valid[0:1200], X_valid[0:1200], T_valid[0:1200], C_valid[0:1200]
-U_test, X_test, T_test, C_test = U_test[0:1800], X_test[0:1800],T_test[0:1800], C_test[0:1800]
+# U_train, X_train, T_train, C_train = U_train[0:3000], X_train[0:3000], T_train[0:3000], C_train[0:3000]
+# U_valid, X_valid, T_valid, C_valid = U_valid[0:1200], X_valid[0:1200], T_valid[0:1200], C_valid[0:1200]
+# U_test, X_test, T_test, C_test = U_test[0:1800], X_test[0:1800],T_test[0:1800], C_test[0:1800]
 
 # print U_train.shape, U_valid.shape, U_test.shape
 # print X_train.shape, X_valid.shape, X_test.shape
