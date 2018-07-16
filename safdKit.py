@@ -401,3 +401,41 @@ def draw_x_y(x,y):
     plt.xlabel('time stamp')
     plt.ylabel('percent')
     plt.show()
+
+def last_element(X, T):
+    X_last = []
+    for i, x_seq in enumerate(X):
+        tmp = list()
+        for j, x in enumerate(x_seq):
+            if j < T[i]:
+                tmp.append(x)
+            else:
+                tmp.append(np.mean(x_seq[:T[i]],axis=0).tolist())
+        X_last.append(tmp)
+    return np.array(X_last)
+
+def remove_padding(X, T):
+    X_last = list()
+    for i, x_seq in enumerate(X):
+        tmp = []
+        for j, x in enumerate(x_seq):
+            if j < T[i]:
+                tmp.append(x.tolist())
+            else:
+                break
+        X_last.append(tmp)
+    return np.array(X_last)
+
+def remove_padding_diff(X, T):
+    X_last = list()
+    for i, x_seq in enumerate(X):
+        tmp = []
+        for j, x in enumerate(x_seq):
+            if j == 0:
+                continue
+            elif 0 < j < T[i]:
+                tmp.append((x-x_seq[j-1]).tolist())
+            else:
+                break
+        X_last.append(tmp)
+    return np.array(X_last)
