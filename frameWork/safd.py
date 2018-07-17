@@ -71,19 +71,19 @@ if not os.path.exists(save_dir):
 save_path = os.path.join(save_dir, "best_validation")
 
 # load data
-dest_path = "../diff_data/"
+source_path = "../diff_data/"
 
-X_train = np.load(dest_path + "X_train_var.npy")
-T_train = np.load(dest_path + "T_train_var.npy")
-C_train = np.load(dest_path + "C_train_var.npy")
+X_train = np.load(source_path + "X_train_var.npy")
+T_train = np.load(source_path + "T_train_var.npy")
+C_train = np.load(source_path + "C_train_var.npy")
 
-X_test = np.load(dest_path + "X_test_var.npy")
-T_test = np.load(dest_path + "T_test_var.npy")
-C_test = np.load(dest_path + "C_test_var.npy")
+X_test = np.load(source_path + "X_test_var.npy")
+T_test = np.load(source_path + "T_test_var.npy")
+C_test = np.load(source_path + "C_test_var.npy")
 
-X_valid = np.load(dest_path + "X_valid_var.npy")
-T_valid = np.load(dest_path + "T_valid_var.npy")
-C_valid = np.load(dest_path + "C_valid_var.npy")
+X_valid = np.load(source_path + "X_valid_var.npy")
+T_valid = np.load(source_path + "T_valid_var.npy")
+C_valid = np.load(source_path + "C_valid_var.npy")
 
 
 s = ran_seed(X_train.shape[0])
@@ -168,7 +168,7 @@ for n_epoch in range(num_epoches):
 
         unc_cen_gt_valid = np.array(unc_cen_gt_valid)
         thrld_score = dict()
-        for sur_thrld_valid in np.arange(0.2, 0.5, 0.02):
+        for sur_thrld_valid in np.arange(0.1, 1.0, 0.02):
             unc_cen_valid = list()
             for ss_valid in Survival_valid:
                 event_flag = False
@@ -196,9 +196,9 @@ for n_epoch in range(num_epoches):
     if (n_epoch+1)-last_improvement > require_improvement:
         break
 
-    print "epoch: ", n_epoch, _mle_loss, _supervised_loss
+    # print "epoch: ", n_epoch, _mle_loss, _supervised_loss
     # print "epoch: ", n_epoch, _mle_loss
-    # print "epoch: ", n_epoch, _supervised_loss
+    print "epoch: ", n_epoch, _supervised_loss
 
 
 
