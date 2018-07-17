@@ -68,6 +68,11 @@ C_valid = np.load(source_path + "C_valid_var.npy")
 session = tf.Session()
 session.run(tf.global_variables_initializer())
 
+global best_validation_accuracy
+global best_thrld
+global last_improvement
+global require_improvement
+
 best_validation_accuracy = 0.0
 best_thrld = 0.0
 last_improvement = 0
@@ -194,6 +199,11 @@ unc_cen_test = np.array(unc_cen_test)
 unc_cen_acc_test = accuracy_score(unc_cen_gt_test, unc_cen_test)
 unc_det_acc_test = np.sum((unc_cen_test[unc_cen_gt_test==0])==0)/float(np.sum(np.array(unc_cen_test)==0))
 
+
+print
+print
+print
+print "best threshold: %s"%best_thrld
 print "censor or uncensor ? : ", unc_cen_acc_test
 print "given uncensor above, the true uncensor accuracy: ", unc_det_acc_test
 
