@@ -157,13 +157,13 @@ for n_epoch in range(num_epoches):
                 unc_cen_gt_valid.extend(np.ones(bat_size_valid).tolist())
             else:
                 unc_cen_gt_valid.extend(np.zeros(bat_size_valid).tolist())
-            _survivals_valid = session.run([survivals],
+            _survivals_valid = session.run(survivals,
                                      feed_dict={X:bat_X_valid,
                                                 batch_size:bat_size_valid,
                                                 mask: tri_mat_valid})
 
-            _survivals_valid = np.array(_survivals_valid)
-            _survivals_valid = _survivals_valid.reshape(_survivals_valid.shape[1], _survivals_valid.shape[2])
+            # _survivals_valid = np.array(_survivals_valid)
+            # _survivals_valid = _survivals_valid.reshape(_survivals_valid.shape[1], _survivals_valid.shape[2])
             Survival_valid.extend(_survivals_valid)
 
         unc_cen_gt_valid = np.array(unc_cen_gt_valid)
@@ -218,13 +218,13 @@ for n in range(time_steps):
         unc_cen_gt.extend(np.ones(bat_size).tolist())
     else:
         unc_cen_gt.extend(np.zeros(bat_size).tolist())
-    _survivals = session.run([survivals],
+    _survivals = session.run(survivals,
                                feed_dict={X:bat_X,
                                           batch_size: bat_size,
                                           mask: tri_mat})
 
-    _survivals = np.array(_survivals)
-    _survivals = _survivals.reshape(_survivals.shape[1],_survivals.shape[2])
+    # _survivals = np.array(_survivals)
+    # _survivals = _survivals.reshape(_survivals.shape[1],_survivals.shape[2])
     Survival.extend(_survivals)
 unc_cen_gt = np.array(unc_cen_gt)
 unc_cen = list()
