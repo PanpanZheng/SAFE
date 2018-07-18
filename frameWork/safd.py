@@ -4,27 +4,21 @@ import numpy as np
 import sys
 import os
 sys.path.append("../")
-
 from safdKit import upp_tri_mat, ran_seed, minibatch
 from sklearn.metrics import classification_report, accuracy_score
-
 
 global best_validation_accuracy
 global best_thrld
 global last_improvement
 global require_improvement
 
-
 # parameters setting
 n_input = 5
-# time_steps = 22
 time_steps = 21
 n_classes = 1
 
 num_units = 32
 learning_rate = .001
-
-# sur_thrld = 0.3
 
 out_weights = tf.Variable(tf.random_normal([num_units, n_classes]),trainable=True)
 out_bias = tf.Variable(tf.random_normal([n_classes]),trainable=True)
@@ -45,16 +39,13 @@ mle_loss = tf.reduce_mean(
     tf.subtract(
                 tf.reduce_sum(lambdas, axis=1),
                 # tf.multiply(tf.log(tf.subtract(tf.exp(tf.gather_nd(lambdas, mle_index)), 1)) ,C),
-                tf.multiply(tf.log(tf.subtract(tf.exp(tf.reduce_sum(lambdas, axis=1)), 1)) ,C)
+                tf.multiply(tf.log(tf.subtract(tf.exp(tf.reduce_sum(lambdas, axis=1)), 1)+tf.exp(-20.)), C)
     )
 )
 
-y_true = tf.placeholder(tf.int32, shape=[None, None], name="y_real")
 mask = tf.placeholder(tf.float32, shape=[None,None], name='upper_matrix')  # upper triangle matrix
 survivals = tf.exp(-tf.matmul(lambdas, mask))
 last_survival = survivals[:,-1]
-supervised_loss = tf.losses.mean_squared_error(y_true, survivals)
-# supervised_loss =tf.losses.sigmoid_cross_entropy(y_true, survivals)
 
 
 #for mle
@@ -65,11 +56,13 @@ train_mle_op = train_mle.apply_gradients(m_capped_gvs)
 
 
 #for supervised
-
-train_supervised = tf.train.AdamOptimizer(learning_rate)
-s_gvs = train_supervised.compute_gradients(supervised_loss)
-s_capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in s_gvs]
-train_supervised_op = train_supervised.apply_gradients(s_capped_gvs)
+# y_true = tf.placeholder(tf.int32, shape=[None, None], name="y_real")
+# supervised_loss = tf.losses.mean_squared_error(y_true, survivals)
+#
+# train_supervised = tf.train.AdamOptimizer(learning_rate)
+# s_gvs = train_supervised.compute_gradients(supervised_loss)
+# s_capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var) for grad, var in s_gvs]
+# train_supervised_op = train_supervised.apply_gradients(s_capped_gvs)
 
 
 #for check points.
@@ -173,14 +166,12 @@ for n_epoch in range(num_epoches):
                 best_thrld = thrld
                 last_improvement = n_epoch+1
                 saver.save(sess=session, save_path=save_path)
-                print "**** ", n_epoch + 1, best_validation_accuracy, best_thrld
+                # print "**** ", n_epoch + 1, best_validation_accuracy, best_thrld
 
     if (n_epoch+1)-last_improvement > require_improvement:
         break
 
-    # print "epoch: ", n_epoch, _mle_loss, _supervised_loss
-    print "epoch: ", n_epoch, _mle_loss
-
+    # print "epoch: ", n_epoch, _mle_loss
 
 saver.restore(sess=session, save_path=save_path)
 correct = 0
@@ -208,7 +199,7 @@ for batch_x, batch_y in zip(batch_x_test, batch_y_test):
 last_corr_rate = correct/float(test_num)
 seq_corr_rate = (np.sum(np.asarray(early_correct), axis=0)/float(test_num))
 
-print last_corr_rate, ": ", seq_corr_rate
-
+print seq_corr_rate
+print "threshold: ", best_thrld
 
 exit(0)
