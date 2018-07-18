@@ -5,8 +5,15 @@ import sys
 import os
 sys.path.append("../")
 
-from safdKit import upp_tri_mat, ran_seed
+from safdKit import upp_tri_mat, ran_seed, minibatch
 from sklearn.metrics import classification_report, accuracy_score
+
+
+global best_validation_accuracy
+global best_thrld
+global last_improvement
+global require_improvement
+
 
 # parameters setting
 n_input = 5
@@ -37,13 +44,15 @@ lambdas = tf.reshape(
 mle_loss = tf.reduce_mean(
     tf.subtract(
                 tf.reduce_sum(lambdas, axis=1),
-                tf.multiply(tf.log(tf.subtract(tf.exp(tf.gather_nd(lambdas, mle_index)), 1)) ,C)
+                # tf.multiply(tf.log(tf.subtract(tf.exp(tf.gather_nd(lambdas, mle_index)), 1)) ,C),
+                tf.multiply(tf.log(tf.subtract(tf.exp(tf.reduce_sum(lambdas, axis=1)), 1)) ,C)
     )
 )
 
 y_true = tf.placeholder(tf.int32, shape=[None, None], name="y_real")
 mask = tf.placeholder(tf.float32, shape=[None,None], name='upper_matrix')  # upper triangle matrix
 survivals = tf.exp(-tf.matmul(lambdas, mask))
+last_survival = survivals[:,-1]
 supervised_loss = tf.losses.mean_squared_error(y_true, survivals)
 # supervised_loss =tf.losses.sigmoid_cross_entropy(y_true, survivals)
 
@@ -77,113 +86,86 @@ X_train = np.load(source_path + "X_train_var.npy")
 T_train = np.load(source_path + "T_train_var.npy")
 C_train = np.load(source_path + "C_train_var.npy")
 
-X_test = np.load(source_path + "X_test_var.npy")
-T_test = np.load(source_path + "T_test_var.npy")
-C_test = np.load(source_path + "C_test_var.npy")
-
 X_valid = np.load(source_path + "X_valid_var.npy")
 T_valid = np.load(source_path + "T_valid_var.npy")
 C_valid = np.load(source_path + "C_valid_var.npy")
 
+X_test = np.load(source_path + "X_test_var.npy")
+T_test = np.load(source_path + "T_test_var.npy")
+C_test = np.load(source_path + "C_test_var.npy")
 
-s = ran_seed(X_train.shape[0])
-X_train, T_train, C_train = X_train[s], T_train[s], C_train[s]
-s = ran_seed(X_test.shape[0])
-X_test, T_test, C_test = X_test[s], T_test[s], C_test[s]
+mini_batch_size = 16
+batch_x_train, batch_y_train, batch_t_train, batch_c_train = minibatch(X_train, T_train, C_train, mini_batch_size, n_input)
+batch_x_valid, batch_y_valid, batch_t_valid, batch_c_valid = minibatch(X_valid, T_valid, C_valid, mini_batch_size, n_input)
+batch_x_test, batch_y_test, batch_t_test, batch_c_test = minibatch(X_test, T_test, C_test, mini_batch_size, n_input)
 
-# print X_train.shape, T_train.shape, C_train.shape
-# print X_test.shape, T_test.shape, C_test.shape
-# print X_valid.shape, T_valid.shape, C_valid.shape
-# exit(0)
-
-session = tf.Session()
-session.run(tf.global_variables_initializer())
-
-global best_validation_accuracy
-global best_thrld
-global last_improvement
-global require_improvement
+# train_num = len(batch_x_train)*mini_batch_size
+valid_num = len(batch_x_valid)*mini_batch_size
+test_num = len(batch_x_test)*mini_batch_size
 
 best_validation_accuracy = 0.0
 best_thrld = 0.0
 last_improvement = 0
-require_improvement = 50
+require_improvement = 20
 num_epoches = 500
+
+session = tf.Session()
+session.run(tf.global_variables_initializer())
 
 for n_epoch in range(num_epoches):
 
-    for n in range(time_steps):
+    for batch_x, batch_t, batch_c in zip(batch_x_train, batch_t_train, batch_c_train):
 
-        if n == 0:
-            continue
-        bat_X = X_train[T_train==(n+1)].tolist()
-        bat_C = C_train[T_train==(n+1)].tolist()
-        bat_size = np.sum(T_train==(n+1)).astype(int)
-        if bat_size == 0:
-            continue
+        bat_size = batch_x.shape[0]
         _, _mle_loss = session.run([train_mle_op, mle_loss],feed_dict={
-                                X: bat_X,
-                                C: bat_C,
-                                mle_index:(np.vstack((np.arange(bat_size), np.zeros(bat_size)+n)).T).astype(int).tolist(),
-                                batch_size: bat_size
+                                X: batch_x,
+                                C: batch_c,
+                                mle_index:(np.vstack((np.arange(bat_size), batch_t-1)).T).astype(int).tolist(),
+                                batch_size:bat_size
         })
 
-        tri_mat = upp_tri_mat(np.zeros((n+1, n+1)))
-        if bat_C[0] == 1:
-            labels = np.zeros((bat_size,n+1))
-        else:
-            labels = np.ones((bat_size,n+1))
+        # seq_len = batch_x.shape[1]
+        # tri_mat = upp_tri_mat(np.zeros((seq_len, seq_len)))
+        # if batch_c[0] == 1:
+        #     labels = np.zeros((bat_size,seq_len))
+        # else:
+        #     labels = np.ones((bat_size,seq_len))
+        #
+        # _, _supervised_loss = session.run([train_supervised_op, supervised_loss], feed_dict={
+        #                         X: batch_x,
+        #                         batch_size: bat_size,
+        #                         mask:tri_mat,
+        #                         y_true:labels
+        # })
 
-        _, _supervised_loss = session.run([train_supervised_op, supervised_loss], feed_dict={
-                                X: bat_X,
-                                batch_size: bat_size,
-                                mask:tri_mat,
-                                y_true:labels
-        })
 
     if (n_epoch+1)%5==0 or n_epoch==num_epoches-1:
 
-        unc_cen_gt_valid = list()
-        Survival_valid = list()
-        for n in range(time_steps):
-            if n == 0:
-                continue
-            bat_X_valid = X_valid[T_valid==(n+1)].tolist()
-            tri_mat_valid = upp_tri_mat(np.zeros((n+1, n+1)))
-            bat_size_valid = np.sum(T_valid==(n+1)).astype(int)
-            if bat_size_valid == 0:
-                continue
-            if (n+1) != time_steps:
-                unc_cen_gt_valid.extend(np.ones(bat_size_valid).tolist())
-            else:
-                unc_cen_gt_valid.extend(np.zeros(bat_size_valid).tolist())
-            _survivals_valid = session.run(survivals,
-                                     feed_dict={X:bat_X_valid,
-                                                batch_size:bat_size_valid,
-                                                mask: tri_mat_valid})
-
-            # _survivals_valid = np.array(_survivals_valid)
-            # _survivals_valid = _survivals_valid.reshape(_survivals_valid.shape[1], _survivals_valid.shape[2])
-            Survival_valid.extend(_survivals_valid)
-
-        unc_cen_gt_valid = np.array(unc_cen_gt_valid)
         thrld_score = dict()
         for sur_thrld_valid in np.arange(0.1, 1.0, 0.02):
-            unc_cen_valid = list()
-            for ss_valid in Survival_valid:
-                event_flag = False
-                for s_valid in ss_valid:
-                    if s_valid <= sur_thrld_valid:
-                        event_flag = True
-                        break
-                if event_flag:
-                    unc_cen_valid.append(1)
-                else:
-                    unc_cen_valid.append(0)
-            unc_cen_valid = np.array(unc_cen_valid)
-            unc_cen_acc_valid = accuracy_score(unc_cen_gt_valid, unc_cen_valid)
-            unc_det_acc_valid = np.sum(unc_cen_valid[unc_cen_gt_valid==1])/float(np.sum(np.array(unc_cen_valid)==1))
-            thrld_score[sur_thrld_valid] = 0.5*unc_cen_acc_valid+0.5*unc_det_acc_valid
+            correct = 0
+            early_correct = []
+            for batch_x, batch_y in zip(batch_x_valid, batch_y_valid):
+                bat_size = batch_x.shape[0]
+                seq_len = batch_x.shape[1]
+                tri_mat = upp_tri_mat(np.zeros((seq_len, seq_len)))
+                _pred_y_valid, _seq_pred_y = session.run([last_survival, survivals],feed_dict={X:batch_x,
+                                                                                              batch_size:bat_size,
+                                                                                              mask: tri_mat})
+                pred_y_valid = np.zeros(_pred_y_valid.shape[0])
+                pred_y_valid[np.where(_pred_y_valid>sur_thrld_valid)] = 1
+                correct += np.sum(pred_y_valid == batch_y)
+
+                _seq_pred_y = _seq_pred_y[:,-10:]
+                seq_pred_y_valid = np.zeros((_pred_y_valid.shape[0], 10))
+                seq_pred_y_valid[np.where(_seq_pred_y>sur_thrld_valid)] = 1
+                batch_y = np.asarray([batch_y,]*10).transpose()
+                early_correct.append(np.sum(seq_pred_y_valid==batch_y, axis=0))
+
+
+            last_corr_rate = correct/float(valid_num)
+            seq_corr_rate = (np.sum(np.asarray(early_correct), axis=0)/float(valid_num))
+            thrld_score[sur_thrld_valid] = np.mean(seq_corr_rate)
 
         for thrld, score in thrld_score.items():
             if score > best_validation_accuracy:
@@ -197,59 +179,36 @@ for n_epoch in range(num_epoches):
         break
 
     # print "epoch: ", n_epoch, _mle_loss, _supervised_loss
-    # print "epoch: ", n_epoch, _mle_loss
-    print "epoch: ", n_epoch, _supervised_loss
-
+    print "epoch: ", n_epoch, _mle_loss
 
 
 saver.restore(sess=session, save_path=save_path)
+correct = 0
+early_correct = []
+for batch_x, batch_y in zip(batch_x_test, batch_y_test):
 
-unc_cen_gt = list()
-Survival = list()
-for n in range(time_steps):
-    if n == 0:
-        continue
-    bat_X = X_test[T_test==(n+1)].tolist()
-    tri_mat = upp_tri_mat(np.zeros((n+1, n+1)))
-    bat_size = np.sum(T_test == (n+1)).astype(int)
-    if bat_size == 0:
-        continue
-    if (n+1) != time_steps:
-        unc_cen_gt.extend(np.ones(bat_size).tolist())
-    else:
-        unc_cen_gt.extend(np.zeros(bat_size).tolist())
-    _survivals = session.run(survivals,
-                               feed_dict={X:bat_X,
-                                          batch_size: bat_size,
-                                          mask: tri_mat})
+    bat_size = batch_x.shape[0]
+    seq_len = batch_x.shape[1]
+    tri_mat = upp_tri_mat(np.zeros((seq_len, seq_len)))
+    _pred_y_test, _seq_pred_y = session.run([last_survival, survivals],
+                                            feed_dict={X:batch_x,
+                                                       batch_size:bat_size,
+                                                       mask:tri_mat
+                                                       })
+    pred_y_test = np.zeros(_pred_y_test.shape[0])
+    pred_y_test[np.where(_pred_y_test > best_thrld)] = 1
+    correct += np.sum(pred_y_test == batch_y)
 
-    # _survivals = np.array(_survivals)
-    # _survivals = _survivals.reshape(_survivals.shape[1],_survivals.shape[2])
-    Survival.extend(_survivals)
-unc_cen_gt = np.array(unc_cen_gt)
-unc_cen = list()
-for ss in Survival:
-    event_flag = False
-    for s in ss:
-        if s <= best_thrld:
-            event_flag = True
-            break
-    if event_flag:
-        unc_cen.append(1)
-    else:
-        unc_cen.append(0)
+    _seq_pred_y = _seq_pred_y[:, -10:]
+    seq_pred_y_test = np.zeros((_pred_y_test.shape[0], 10))
+    seq_pred_y_test[np.where(_seq_pred_y > best_thrld)] = 1
+    batch_y = np.asarray([batch_y, ] * 10).transpose()
+    early_correct.append(np.sum(seq_pred_y_test == batch_y, axis=0))
 
+last_corr_rate = correct/float(test_num)
+seq_corr_rate = (np.sum(np.asarray(early_correct), axis=0)/float(test_num))
 
-unc_cen = np.array(unc_cen)
-# C_test = C_test[T_test != 1]
-unc_cen_acc = accuracy_score(unc_cen_gt, unc_cen)
-# print np.sum(unc_cen[C_test == 1]), np.sum(np.array(unc_cen)==1)
-print
-print
-print
-unc_det_acc = np.sum(unc_cen[unc_cen_gt == 1])/float(np.sum(np.array(unc_cen)==1))
-print "censor or uncensor ? : ", unc_cen_acc
-print "given uncensor above, the true uncensor accuracy: ", unc_det_acc
+print last_corr_rate, ": ", seq_corr_rate
 
 
 exit(0)
