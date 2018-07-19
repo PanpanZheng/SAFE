@@ -6,6 +6,9 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 from keras.preprocessing.sequence import pad_sequences
 from sklearn import tree, ensemble, neighbors, svm, covariance
+import random
+np.seterr(divide='ignore', invalid='ignore')
+
 
 def sample_shuffle_uspv(X,n):
 
@@ -439,3 +442,66 @@ def remove_padding_diff(X, T):
                 break
         X_last.append(tmp)
     return np.array(X_last)
+
+
+
+def minibatch(X, T, C, batch_size=16, n_input=5):
+
+    minibatch_list_x = []
+    minibatch_list_y = []
+    minibatch_list_t = []
+    minibatch_list_c = []
+    # count = 0
+    for t in np.unique(T):
+        sub_X = X[np.where(T==t)]
+        sub_C = C[np.where(T==t)]
+        sub_T = T[np.where(T==t)]
+        n_sub_batch = int(sub_X.shape[0]/batch_size)
+        # count += n_sub_batch*batch_size
+        for n in range(n_sub_batch):
+            minibatch_list_x.append(np.asarray(list(sub_X[n*batch_size: (n+1)*batch_size])).reshape(batch_size,int(t),n_input))
+            minibatch_list_t.append(np.asarray(list(sub_T[n*batch_size: (n+1)*batch_size])))
+            minibatch_list_c.append(np.asarray(list(sub_C[n*batch_size: (n+1)*batch_size])))
+            if t < 21:
+                # minibatch_list_y.append(np.ones((batch_size,1)))
+                minibatch_list_y.append(np.zeros(batch_size))
+            else:
+                # minibatch_list_y.append(np.zeros((batch_size, 1)))
+                minibatch_list_y.append(np.ones(batch_size))
+    assert(len(minibatch_list_x)==len(minibatch_list_y))
+    c = list(zip(minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c))
+    random.shuffle(c)
+    minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c = zip(*c)
+    return minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c,
+
+
+
+
+def prec_reca_F1(L, I):
+
+    _L = np.logical_not(L).astype(float)
+    _I = np.logical_not(I).astype(float)
+
+    TP = np.logical_and(L, I).astype(float)
+    TN = np.logical_and(_L, _I).astype(float)
+    FP = np.logical_and(_L, I).astype(float)
+    FN = np.logical_and(L, _I).astype(float)
+
+    precision = np.divide(np.sum(TP,axis=0),
+                          np.add(np.sum(TP,axis=0),
+                                 np.sum(FP,axis=0)))
+    precision[np.where(np.isnan(precision))] = 0
+
+    recall = np.divide(np.sum(TP,axis=0),
+                          np.add(np.sum(TP,axis=0),
+                                 np.sum(FN,axis=0)))
+    recall[np.where(np.isnan(recall))] = 0
+
+    F1 = np.multiply(2,
+                np.divide(
+                    np.multiply(precision, recall),
+                    np.add(precision, recall)))
+    F1[np.where(np.isnan(F1))] = 0
+
+    return precision, recall, F1
+
