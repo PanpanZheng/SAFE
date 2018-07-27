@@ -4,20 +4,76 @@ import numpy as np
 import sys
 import os
 sys.path.append("../")
-from safdKit import upp_tri_mat, ran_seed, minibatch, minibatch_twitter, minibatch_wiki, prec_reca_F1
-from sklearn.metrics import classification_report, accuracy_score
+from safdKit import upp_tri_mat,minibatch, prec_reca_F1, get_first_beat
 
 global best_validation_accuracy
 global best_thrld
 global last_improvement
 global require_improvement
+from collections import defaultdict
+
+# load data
+
+if len(sys.argv) != 2:
+    print "please add 1 parameter."
+    exit(0)
+
+if sys.argv[1] == "twitter":
+
+    source_path = "../diff_data_2/"
+    X_train = np.load(source_path + "X_train_var.npy")
+    T_train = np.load(source_path + "T_train_var.npy")
+    C_train = np.load(source_path + "C_train_var.npy")
+
+    X_test = np.load(source_path + "X_test_var.npy")
+    T_test = np.load(source_path + "T_test_var.npy")
+    C_test = np.load(source_path + "C_test_var.npy")
+
+    X_valid = np.load(source_path + "X_valid_var.npy")
+    T_valid = np.load(source_path + "T_valid_var.npy")
+    C_valid = np.load(source_path + "C_valid_var.npy")
+
+    n_input = 5
+
+elif sys.argv[1] == "wiki":
+
+    source_path = "../wiki/v8/"
+    X_train = np.load(source_path + "X_train.npy")
+    T_train = np.load(source_path + "T_train.npy")
+    C_train = np.load(source_path + "C_train.npy")
+
+    X_test = np.load(source_path + "X_test.npy")
+    T_test = np.load(source_path + "T_test.npy")
+    C_test = np.load(source_path + "C_test.npy")
+
+    X_valid = np.load(source_path + "X_valid.npy")
+    T_valid = np.load(source_path + "T_valid.npy")
+    C_valid = np.load(source_path + "C_valid.npy")
+
+    n_input = 8
+
+else:
+    print "parameter is not right, twitter or wiki."
+    exit(0)
+
+
+# print np.sum(T_train == 14), np.sum(T_train == 16)
+# print np.sum(T_test == 14), np.sum(T_test == 16)
+# print np.sum(T_valid == 14), np.sum(T_valid == 16)
+#
+# exit(0)
+
+# print X_train.shape, T_train.shape, C_train.shape
+# print X_test.shape, T_test.shape, C_test.shape
+# print X_valid.shape, T_valid.shape, C_valid.shape
+#
+# exit(0)
+
+
 
 # parameters setting
-# n_input = 9
-# n_input = 8
-n_input = 5
 n_classes = 1
-before_steps = 10
+before_steps = 5
 
 num_units = 32
 learning_rate = .001
@@ -74,46 +130,16 @@ if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 save_path = os.path.join(save_dir, "best_validation")
 
-# load data
-source_path = "../diff_data/"
-
-X_train = np.load(source_path + "X_train_var.npy")
-T_train = np.load(source_path + "T_train_var.npy")
-C_train = np.load(source_path + "C_train_var.npy")
-
-X_valid = np.load(source_path + "X_valid_var.npy")
-T_valid = np.load(source_path + "T_valid_var.npy")
-C_valid = np.load(source_path + "C_valid_var.npy")
-
-X_test = np.load(source_path + "X_test_var.npy")
-T_test = np.load(source_path + "T_test_var.npy")
-C_test = np.load(source_path + "C_test_var.npy")
-
-
-# source_path = "../wiki/"
-#
-# X_train = np.load(source_path + "X_train.npy")
-# T_train = np.load(source_path + "T_train.npy")
-# C_train = np.load(source_path + "C_train.npy")
-#
-# X_test = np.load(source_path + "X_test.npy")
-# T_test = np.load(source_path + "T_test.npy")
-# C_test = np.load(source_path + "C_test.npy")
-#
-# X_valid = np.load(source_path + "X_valid.npy")
-# T_valid = np.load(source_path + "T_valid.npy")
-# C_valid = np.load(source_path + "C_valid.npy")
-
-
 mini_batch_size = 16
+mini_batch_size_test_valid = 5
 batch_x_train, batch_y_train, batch_t_train, batch_c_train = minibatch(X_train, T_train, C_train, mini_batch_size, n_input)
-batch_x_valid, batch_y_valid, batch_t_valid, batch_c_valid = minibatch(X_valid, T_valid, C_valid, mini_batch_size, n_input)
-batch_x_test, batch_y_test, batch_t_test, batch_c_test = minibatch(X_test, T_test, C_test, mini_batch_size, n_input)
+batch_x_valid, batch_y_valid, batch_t_valid, batch_c_valid = minibatch(X_valid, T_valid, C_valid, mini_batch_size_test_valid, n_input)
+batch_x_test, batch_y_test, batch_t_test, batch_c_test = minibatch(X_test, T_test, C_test, mini_batch_size_test_valid, n_input)
 
 
 # train_num = len(batch_x_train)*mini_batch_size
-valid_num = len(batch_x_valid)*mini_batch_size
-test_num = len(batch_x_test)*mini_batch_size
+valid_num = len(batch_x_valid)*mini_batch_size_test_valid
+test_num = len(batch_x_test)*mini_batch_size_test_valid
 
 best_validation_accuracy = 0.0
 best_thrld = 0.0
@@ -172,9 +198,9 @@ for n_epoch in range(num_epoches):
                 pred_y_valid[np.where(_pred_y_valid>sur_thrld_valid)] = 1
                 correct += np.sum(pred_y_valid == batch_y)
 
-                _seq_pred_y = _seq_pred_y[:,-before_steps:]
+                # _seq_pred_y = _seq_pred_y[:,:before_steps]
                 seq_pred_y_valid = np.zeros((_pred_y_valid.shape[0], before_steps))
-                seq_pred_y_valid[np.where(_seq_pred_y>sur_thrld_valid)] = 1
+                seq_pred_y_valid[np.where(_seq_pred_y[:,:before_steps]>sur_thrld_valid)] = 1
                 batch_y = np.asarray([batch_y,]*before_steps).transpose()
                 early_correct.append(np.sum(seq_pred_y_valid==batch_y, axis=0))
                 yy.extend(batch_y)
@@ -208,7 +234,11 @@ correct = 0
 early_correct = []
 yy = []
 pp = []
-for batch_x, batch_y in zip(batch_x_test, batch_y_test):
+
+early_detect_steps = defaultdict(list)
+# early_detect_rate = defaultdict(list)
+# early_detect_num = defaultdict(list)
+for batch_x, batch_y, batch_t in zip(batch_x_test, batch_y_test, batch_t_test):
 
     bat_size = batch_x.shape[0]
     seq_len = batch_x.shape[1]
@@ -222,9 +252,23 @@ for batch_x, batch_y in zip(batch_x_test, batch_y_test):
     pred_y_test[np.where(_pred_y_test > best_thrld)] = 1
     correct += np.sum(pred_y_test == batch_y)
 
-    _seq_pred_y = _seq_pred_y[:, -before_steps:]
+    seq_pred_msa_test = np.zeros((_pred_y_test.shape[0], int(batch_t[0])))
+    seq_pred_msa_test[np.where(_seq_pred_y > best_thrld)] = 1
+    batch_msa = np.asarray([batch_y.flatten(), ]*int(batch_t[0])).transpose()
+
+    fb = get_first_beat(seq_pred_msa_test, batch_msa)
+
+    early_detect_steps[int(batch_t[0])].append(
+                                            np.mean(np.multiply(
+                                                np.ones(fb.shape[0]), int(batch_t[0]))-fb)
+                                        )
+
+    # early_detect_rate[int(batch_t[0])].append(np.divide(fb.shape[0], batch_msa.shape[0], dtype="float"))
+    # early_detect_num[int(batch_t[0])].append(fb.shape[0])
+
+    # _seq_pred_y = _seq_pred_y[:, :before_steps]
     seq_pred_y_test = np.zeros((_pred_y_test.shape[0], before_steps))
-    seq_pred_y_test[np.where(_seq_pred_y > best_thrld)] = 1
+    seq_pred_y_test[np.where(_seq_pred_y[:, :before_steps] > best_thrld)] = 1
     batch_y = np.asarray([batch_y, ] * before_steps).transpose()
     early_correct.append(np.sum(seq_pred_y_test == batch_y, axis=0))
     yy.extend(batch_y)
@@ -239,11 +283,19 @@ _precision, _recall, _F1 = prec_reca_F1(gt, pr)
 
 seq_corr_rate = (np.sum(np.asarray(early_correct), axis=0)/float(test_num))
 
-
+print
+print
 print
 print "precision: ", _precision
 print "recall: ", _recall
 print "F1: ", _F1
 print "accuracy: ", seq_corr_rate
 
+print "------------------------------------------------------"
+coll_me = list()
+for k, v in early_detect_steps.items():
+    coll_me.extend(v)
+    # print k, ": ", np.mean(v)
+
+print "mae: ", np.mean(coll_me)
 exit(0)

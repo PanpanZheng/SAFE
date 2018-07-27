@@ -445,7 +445,36 @@ def remove_padding_diff(X, T):
 
 
 
+
 def minibatch(X, T, C, batch_size=16, n_input=5):
+
+    minibatch_list_x = []
+    minibatch_list_y = []
+    minibatch_list_t = []
+    minibatch_list_c = []
+    # count = 0
+    for t in np.unique(T):
+        sub_X = X[np.where(T==t)]
+        sub_C = C[np.where(T==t)]
+        sub_T = T[np.where(T==t)]
+        n_sub_batch = int(sub_X.shape[0]/batch_size)
+        # count += n_sub_batch*batch_size
+        for n in range(n_sub_batch):
+            minibatch_list_x.append(np.asarray(list(sub_X[n*batch_size: (n+1)*batch_size])).reshape(batch_size,int(t),n_input))
+            minibatch_list_t.append(np.asarray(list(sub_T[n*batch_size: (n+1)*batch_size])))
+            minibatch_list_c.append(np.asarray(list(sub_C[n*batch_size: (n+1)*batch_size])))
+            minibatch_list_y.append(
+                np.logical_not(
+                    np.asarray(list(sub_C[n*batch_size:(n+1)*batch_size]))
+                ).astype(float)
+            )
+    assert(len(minibatch_list_x)==len(minibatch_list_y))
+    c = list(zip(minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c))
+    random.shuffle(c)
+    minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c = zip(*c)
+    return minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c
+
+def minibatch_twitter(X, T, C, batch_size=16, n_input=5):
 
     minibatch_list_x = []
     minibatch_list_y = []
@@ -472,7 +501,43 @@ def minibatch(X, T, C, batch_size=16, n_input=5):
     c = list(zip(minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c))
     random.shuffle(c)
     minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c = zip(*c)
-    return minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c,
+    return minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c
+
+
+
+def minibatch_wiki(X, T, C, batch_size=16, n_input=5):
+
+    minibatch_list_x = []
+    minibatch_list_y = []
+    minibatch_list_t = []
+    minibatch_list_c = []
+    # count = 0
+    for t in np.unique(T):
+        sub_X = X[np.where(T==t)]
+        sub_C = C[np.where(T==t)]
+        sub_T = T[np.where(T==t)]
+        n_sub_batch = int(sub_X.shape[0]/batch_size)
+        # count += n_sub_batch*batch_size
+        for n in range(n_sub_batch):
+            minibatch_list_x.append(np.asarray(list(sub_X[n*batch_size: (n+1)*batch_size])).reshape(batch_size,int(t),n_input))
+            minibatch_list_t.append(np.asarray(list(sub_T[n*batch_size: (n+1)*batch_size])))
+            minibatch_list_c.append(np.asarray(list(sub_C[n*batch_size: (n+1)*batch_size])))
+            minibatch_list_y.append(
+                np.logical_not(
+                    np.asarray(list(sub_C[n*batch_size:(n+1)*batch_size]))
+                ).astype(float)
+            )
+            # if t < 21:
+            #     # minibatch_list_y.append(np.ones((batch_size,1)))
+            #     minibatch_list_y.append(np.zeros(batch_size))
+            # else:
+            #     # minibatch_list_y.append(np.zeros((batch_size, 1)))
+            #     minibatch_list_y.append(np.ones(batch_size))
+    assert(len(minibatch_list_x)==len(minibatch_list_y))
+    c = list(zip(minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c))
+    random.shuffle(c)
+    minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c = zip(*c)
+    return minibatch_list_x, minibatch_list_y, minibatch_list_t, minibatch_list_c
 
 
 
@@ -505,3 +570,18 @@ def prec_reca_F1(L, I):
 
     return precision, recall, F1
 
+
+def get_first_beat(x, y):
+
+    x_1 = np.where(x==y)[0]
+    x_2 = np.where(x==y)[1]
+
+    d = defaultdict(list)
+    for _x_1, _x_2 in zip(x_1, x_2):
+        d[_x_1].append(_x_2)
+
+    first_beat = list()
+    for k, v in d.items():
+        first_beat.append(v[0])
+    first_beat = np.array(first_beat) + 1
+    return first_beat
