@@ -28,7 +28,7 @@ if len(sys.argv) != 2:
 
 if sys.argv[1] == "twitter":
 
-    source_path = "../diff_data_2/"
+    source_path = "../twitter/"
     X_train = np.load(source_path + "X_train_var.npy")
     T_train = np.load(source_path + "T_train_var.npy")
     C_train = np.load(source_path + "C_train_var.npy")
