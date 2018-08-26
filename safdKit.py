@@ -45,7 +45,6 @@ def load_twitter():
         cen_usr_mis_data_keys.append(key)
         cen_usr_mis_data_values.append(value)
 
-
     uncen_usr_df = df(uncen_usr_data_values,
                              columns=['follower_#', 'friend_#', 'member_#', 'favor_#', 'tweet_#', 'Survival', 'Event'])
     cen_usr_las_tim_df = df(cen_usr_las_tim_data_values,
@@ -585,3 +584,119 @@ def get_first_beat(x, y):
         first_beat.append(v[0])
     first_beat = np.array(first_beat) + 1
     return first_beat
+
+
+def twitter_dist(*args):
+    N = 10
+    #     U = args[0].values()
+    #     C1 = args[1].values()
+    #     C2 = args[2].values()
+    U = args[0]
+    C1 = args[1]
+
+    ind = np.arange(N)  # the x locations for the groups
+    width = 0.35  # the width of the bars: can also be len(x) sequence
+
+    p1 = plt.bar(ind, C1, width)
+    #     p2 = plt.bar(ind, C2, width,
+    #                  bottom=C1)
+    p3 = plt.bar(ind, U, width,
+                 bottom=C1)
+
+    plt.ylabel('Sample number')
+    plt.xlabel('Tracking sequence length')
+    plt.title('Event-censor distribution for twitter')
+    plt.xticks(ind, ('12', '13', '14', '15',
+                     '16', '17', '18', '19', '20',
+                     '21'))
+    plt.yticks(np.arange(0, 3500, 500))
+    plt.legend((p1[0], p3[0]), ('right-censored', 'event'))
+
+    plt.show()
+
+
+def wiki_dist(*args):
+    N = 9
+    #     U = args[0].values()
+    #     C1 = args[1].values()
+    #     C2 = args[2].values()
+    U = args[0]
+    C1 = args[1]
+
+    ind = np.arange(N)  # the x locations for the groups
+    width = 0.35  # the width of the bars: can also be len(x) sequence
+
+    p1 = plt.bar(ind, C1, width)
+    #     p2 = plt.bar(ind, C2, width,
+    #                  bottom=C1)
+    p3 = plt.bar(ind, U, width,
+                 bottom=C1)
+
+    plt.ylabel('Sample number')
+    plt.xlabel('Editting sequence length')
+    plt.title('Event-censor distribution for wiki')
+    plt.xticks(ind, ('12', '13', '14', '15',
+                     '16', '17', '18', '19', '20'))
+    plt.yticks(np.arange(0, 500, 50))
+    plt.legend((p1[0], p3[0]), ('right-censored', 'event'))
+
+    plt.show()
+
+
+def early_det(x, y):
+    first_beat = []
+    for _x, _y in zip(x, y):
+        ear_det = False
+        if np.where(_x==_y)[0].any():
+            beat = True
+            for i in range(np.where(_x==_y)[0][0],len(_x)):
+                if _x[i] != _y[i]:
+                    beat = False
+                    break
+            if beat:
+                ear_det = True
+        if ear_det:
+            first_beat.append(np.where(_x==_y)[0][0] + 1)
+    return np.asarray(first_beat)
+
+
+def me_evaluation(N, men_means, men_std, women_means, women_std, child_means, child_std):
+    # N = 5
+    # men_means = (20, 35, 30, 35, 27)
+    # men_std = (2, 3, 4, 1, 2)
+
+    ind = np.arange(N)  # the x locations for the groups
+    width = 0.25  # the width of the bars
+
+    fig, ax = plt.subplots()
+    rects1 = ax.bar(ind, child_means, width, color='r', yerr=child_std)
+    rects2 = ax.bar(ind + width, men_means, width, color='y', yerr=men_std)
+
+    # women_means = (25, 32, 34, 20, 25)
+    # women_std = (3, 5, 2, 3, 3)
+    rects3 = ax.bar(ind + width + width, women_means, width, color='b', yerr=women_std)
+
+    # add some text for labels, title and axes ticks
+    ax.set_ylabel('Early Time Stamps')
+    #     ax.set_ylabel('Early Detected Instance Number')
+    #     ax.set_title('Early Time Stamps by Groups')
+    #     ax.set_xticks(ind + width / 2)
+    ax.set_xticks(ind + width / 3)
+    ax.set_xticklabels(('T12', 'T13', 'T14', 'T15', 'T16', 'T17', 'T18', 'T19', 'T20'))
+
+    #     ax.legend((rects1[0], rects2[0]), ('SAFD', 'M-LSTM'))
+    ax.legend((rects1[0], rects2[0], rects3[0]), ('Vandal', 'SAFD', 'M-LSTM'))
+
+    def autolabel(rects):
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width() / 2., height,
+                    #             ax.text(rect.get_x() + rect.get_width()/3., 1.05*height,
+                    '%d' % int(height),
+                    ha='center', va='bottom')
+
+    autolabel(rects1)
+    autolabel(rects2)
+    autolabel(rects3)
+
+    plt.show()
