@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import os
 sys.path.append("../")
-from safdKit import upp_tri_mat,minibatch, prec_reca_F1, get_first_beat
+from safdKit import upp_tri_mat,minibatch, prec_reca_F1, get_first_beat, early_det
 
 global best_validation_accuracy
 global best_thrld
@@ -13,7 +13,7 @@ global require_improvement
 from collections import defaultdict
 
 # load data
-
+#
 if len(sys.argv) != 2:
     print "please add 1 parameter."
     exit(0)
@@ -57,11 +57,30 @@ else:
     exit(0)
 
 
+
+# source_path = "../twitter/"
+# X_train = np.load(source_path + "X_train_var.npy")
+# T_train = np.load(source_path + "T_train_var.npy")
+# C_train = np.load(source_path + "C_train_var.npy")
+#
+# X_test = np.load(source_path + "X_test_var.npy")
+# T_test = np.load(source_path + "T_test_var.npy")
+# C_test = np.load(source_path + "C_test_var.npy")
+#
+# X_valid = np.load(source_path + "X_valid_var.npy")
+# T_valid = np.load(source_path + "T_valid_var.npy")
+# C_valid = np.load(source_path + "C_valid_var.npy")
+#
+# n_input = 5
 # print np.sum(T_train == 14), np.sum(T_train == 16)
 # print np.sum(T_test == 14), np.sum(T_test == 16)
 # print np.sum(T_valid == 14), np.sum(T_valid == 16)
 #
 # exit(0)
+
+
+
+
 
 # print X_train.shape, T_train.shape, C_train.shape
 # print X_test.shape, T_test.shape, C_test.shape
@@ -73,7 +92,7 @@ else:
 
 # parameters setting
 n_classes = 1
-before_steps = 5
+before_steps = 10
 
 num_units = 32
 learning_rate = .001
@@ -149,6 +168,21 @@ num_epoches = 500
 
 session = tf.Session()
 session.run(tf.global_variables_initializer())
+tt = tf.trainable_variables()
+
+# XX = session.run(tf.trainable_variables())
+
+# print type(XX)
+# print "----------------------------------------"
+# print len(XX)
+
+# for e in XX:
+#     print np.asarray(e).shape
+#     print
+#     print
+#
+#
+# exit(0)
 
 for n_epoch in range(num_epoches):
 
@@ -235,9 +269,14 @@ early_correct = []
 yy = []
 pp = []
 
+
+# print "best_threshold: ", best_thrld
+#
+# exit(0)
 early_detect_steps = defaultdict(list)
 # early_detect_rate = defaultdict(list)
 # early_detect_num = defaultdict(list)
+before_steps2 = 5
 for batch_x, batch_y, batch_t in zip(batch_x_test, batch_y_test, batch_t_test):
 
     bat_size = batch_x.shape[0]
@@ -252,25 +291,27 @@ for batch_x, batch_y, batch_t in zip(batch_x_test, batch_y_test, batch_t_test):
     pred_y_test[np.where(_pred_y_test > best_thrld)] = 1
     correct += np.sum(pred_y_test == batch_y)
 
-    seq_pred_msa_test = np.zeros((_pred_y_test.shape[0], int(batch_t[0])))
-    seq_pred_msa_test[np.where(_seq_pred_y > best_thrld)] = 1
-    batch_msa = np.asarray([batch_y.flatten(), ]*int(batch_t[0])).transpose()
-
-    fb = get_first_beat(seq_pred_msa_test, batch_msa)
-
-    early_detect_steps[int(batch_t[0])].append(
-                                            np.mean(np.multiply(
-                                                np.ones(fb.shape[0]), int(batch_t[0]))-fb)
-                                        )
+    seq_events = _seq_pred_y[batch_y==0]
+    if seq_events.shape[0] != 0:
+        seq_pred_me_test = np.zeros((seq_events.shape[0], int(batch_t[0])))
+        seq_pred_me_test[np.where(seq_events > best_thrld)] = 1
+        # batch_msa = np.asarray([batch_y.flatten(), ]*int(batch_t[0])).transpose()
+        batch_me = np.asarray([np.zeros(seq_events.shape[0]), ] * int(batch_t[0])).transpose()
+        # fb = get_first_beat(seq_pred_me_test, batch_me)
+        fb = early_det(seq_pred_me_test, batch_me)
+        early_detect_steps[int(batch_t[0])].extend(np.multiply(np.ones(fb.shape[0]), int(batch_t[0]))-fb)
 
     # early_detect_rate[int(batch_t[0])].append(np.divide(fb.shape[0], batch_msa.shape[0], dtype="float"))
     # early_detect_num[int(batch_t[0])].append(fb.shape[0])
 
     # _seq_pred_y = _seq_pred_y[:, :before_steps]
-    seq_pred_y_test = np.zeros((_pred_y_test.shape[0], before_steps))
-    seq_pred_y_test[np.where(_seq_pred_y[:, :before_steps] > best_thrld)] = 1
-    batch_y = np.asarray([batch_y, ] * before_steps).transpose()
+    seq_pred_y_test = np.zeros((_pred_y_test.shape[0], before_steps2))
+    seq_pred_y_test[np.where(_seq_pred_y[:, :before_steps2] > best_thrld)] = 1
+    batch_y = np.asarray([batch_y, ] * before_steps2).transpose()
     early_correct.append(np.sum(seq_pred_y_test == batch_y, axis=0))
+    # print "predicted: ", seq_pred_y_test
+    # print "groud truth: ", batch_y
+    # print "-----------------------------"
     yy.extend(batch_y)
     pp.extend(seq_pred_y_test)
 
@@ -292,10 +333,7 @@ print "F1: ", _F1
 print "accuracy: ", seq_corr_rate
 
 print "------------------------------------------------------"
-coll_me = list()
 for k, v in early_detect_steps.items():
-    coll_me.extend(v)
-    # print k, ": ", np.mean(v)
+    print k, ": ", np.mean(v), len(v)
 
-print "mae: ", np.mean(coll_me)
 exit(0)
