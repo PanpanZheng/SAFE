@@ -4,7 +4,7 @@ from tensorflow.contrib import rnn
 import random
 import sys
 sys.path.append("../")
-from safdKit import prec_reca_F1, get_first_beat
+from safdKit import prec_reca_F1, get_first_beat, early_det
 from collections import defaultdict
 
 def unison_shuffled_copies(a, b):
@@ -162,15 +162,26 @@ with tf.Session() as sess:
         # if int(batch_t) == 21:
         #     continue
 
-        seq_pred_msa_test = np.zeros((_pred_y_test.shape[0],int(batch_t)))
-        seq_pred_msa_test[np.where(_seq_pred_y > 0.5)] = 1
-        batch_msa = np.asarray([batch_y.flatten(),]*int(batch_t)).transpose()
+        seq_events = _seq_pred_y[batch_y.flatten() == 1]
 
-        fb = get_first_beat(seq_pred_msa_test, batch_msa)
-        early_detect_steps[int(batch_t)].append(
-                                                np.mean(np.multiply(
-                                                    np.ones(fb.shape[0]),int(batch_t))-fb)
-                                              )
+        if seq_events.shape[0] != 0:
+            seq_pred_me_test = np.zeros((seq_events.shape[0], int(batch_t)))
+            seq_pred_me_test[np.where(seq_events > 0.5)] = 1
+            batch_me = np.asarray([np.ones(seq_events.shape[0]), ] * int(batch_t)).transpose()
+            # fb = get_first_beat(seq_pred_me_test, batch_me)
+            fb = early_det(seq_pred_me_test, batch_me)
+            early_detect_steps[int(batch_t)].extend(np.multiply(np.ones(fb.shape[0]), int(batch_t)) - fb)
+
+
+        # seq_pred_msa_test = np.zeros((_pred_y_test.shape[0],int(batch_t)))
+        # seq_pred_msa_test[np.where(_seq_pred_y > 0.5)] = 1
+        # batch_msa = np.asarray([batch_y.flatten(),]*int(batch_t)).transpose()
+        #
+        # fb = get_first_beat(seq_pred_msa_test, batch_msa)
+        # early_detect_steps[int(batch_t)].append(
+        #                                         np.mean(np.multiply(
+        #                                             np.ones(fb.shape[0]),int(batch_t))-fb)
+        #                                       )
         # early_detect_rate[int(batch_t)].append(np.divide(fb.shape[0],batch_msa.shape[0],dtype="float"))
         # early_detect_num[int(batch_t)].append(fb.shape[0])
 
@@ -197,10 +208,8 @@ with tf.Session() as sess:
     print "F1: ", _F1
     print "accuracy: ", seq_corr_rate
 
-    print "-----------------------------------------------------------"
-    coll_me = list()
-    for k, v in early_detect_steps.items():
-        coll_me.extend(v)
-        # print k, ": ", np.mean(v), early_detect_num[k],early_detect_rate[k]
-    print "mae: ", np.mean(coll_me)
+    # print "------------------------------------------------------"
+    # for k, v in early_detect_steps.items():
+    #     print k, ": ", v, np.mean(v), len(v)
+
 exit(0)
