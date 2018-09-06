@@ -588,7 +588,7 @@ def get_first_beat(x, y):
 
 def twitter_dist(*args):
     N = 9
-    #     N = 10
+#     N = 10
     #     U = args[0].values()
     #     C1 = args[1].values()
     #     C2 = args[2].values()
@@ -598,27 +598,26 @@ def twitter_dist(*args):
     ind = np.arange(N)  # the x locations for the groups
     width = 0.35  # the width of the bars: can also be len(x) sequence
 
-    p1 = plt.bar(ind, C1, width, color='g')
+    p1 = plt.bar(ind, C1, width, color='y')
     #     p2 = plt.bar(ind, C2, width,
     #                  bottom=C1)
     p3 = plt.bar(ind, U, width,
                  bottom=C1, color='r')
 
     plt.ylabel('User number')
-    plt.xlabel('Sequence length')
+    plt.xlabel('Last observed timestamp')
     #     plt.title('Suspended-censor distribution for wiki')
-    #     plt.xticks(ind, ('12', '13', '14', '15',
-    #                      '16', '17', '18', '19', '20',
-    #                      '21'))
+#     plt.xticks(ind, ('T12', 'T13', 'T14', 'T15',
+#                      'T16', 'T17', 'T18', 'T19', 'T20',
+#                      'T21'))
 
     plt.xticks(ind, ('T12', 'T13', 'T14', 'T15',
                      'T16', 'T17', 'T18', 'T19', 'T20'))
     plt.yticks(np.arange(0, 500, 50))
     #     plt.yticks(np.arange(0, 3500, 500))
-    plt.legend((p1[0], p3[0]), ('right-censored', 'Suspended'))
+    plt.legend((p1[0], p3[0]), ('right-censored', 'Event'), prop={'size': 12})
 
     plt.show()
-
 
 
 def wiki_dist(*args):
@@ -682,24 +681,23 @@ def me_evaluation(N, men_means, women_means):
     rects3 = ax.bar(ind + width, women_means, width, color='b')
 
     # add some text for labels, title and axes ticks
-    ax.set_ylabel('Percent of early-detected fraudster')
-    # ax.set_ylabel('Early-detected timestamps')
-    ax.set_xlabel('Sequence length')
+#     ax.set_ylabel('Percentage of early-detected fraudsters')
+    ax.set_ylabel('Early-detected timestamps')
+    ax.set_xlabel('Suspended timestamp')
     #     ax.set_ylabel('Early Detected Instance Number')
     #     ax.set_title('Early Time Stamps by Groups')
     ax.set_xticks(ind + width/2)
 #     ax.set_xticks(ind + width / 3)
-    ax.set_xticklabels(('12', '13', '14', '15', '16', '17', '18', '19', '20'))
+    ax.set_xticklabels(('T12', 'T13', 'T14', 'T15', 'T16', 'T17', 'T18', 'T19', 'T20'))
 
-    #     ax.legend((rects1[0], rects2[0]), ('SAFD', 'M-LSTM'))
-    ax.legend((rects2[0], rects3[0]), ('SAFE', 'SAFE-r'))
+    ax.legend((rects2[0], rects3[0]), ('SAFE', 'M-LSTM'))
 
     def autolabel(rects):
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width() / 2., height,
                     #             ax.text(rect.get_x() + rect.get_width()/3., 1.05*height,
-                    '%.2f'%height,
+                    '%.1f'%height,
                     ha='center', va='bottom')
 
 #     autolabel(rects1)
