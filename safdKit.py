@@ -587,7 +587,8 @@ def get_first_beat(x, y):
 
 
 def twitter_dist(*args):
-    N = 10
+    N = 9
+    #     N = 10
     #     U = args[0].values()
     #     C1 = args[1].values()
     #     C2 = args[2].values()
@@ -597,22 +598,27 @@ def twitter_dist(*args):
     ind = np.arange(N)  # the x locations for the groups
     width = 0.35  # the width of the bars: can also be len(x) sequence
 
-    p1 = plt.bar(ind, C1, width)
+    p1 = plt.bar(ind, C1, width, color='g')
     #     p2 = plt.bar(ind, C2, width,
     #                  bottom=C1)
     p3 = plt.bar(ind, U, width,
-                 bottom=C1)
+                 bottom=C1, color='r')
 
-    plt.ylabel('Sample number')
-    plt.xlabel('Tracking sequence length')
-    plt.title('Event-censor distribution for twitter')
-    plt.xticks(ind, ('12', '13', '14', '15',
-                     '16', '17', '18', '19', '20',
-                     '21'))
-    plt.yticks(np.arange(0, 3500, 500))
-    plt.legend((p1[0], p3[0]), ('right-censored', 'event'))
+    plt.ylabel('User number')
+    plt.xlabel('Sequence length')
+    #     plt.title('Suspended-censor distribution for wiki')
+    #     plt.xticks(ind, ('12', '13', '14', '15',
+    #                      '16', '17', '18', '19', '20',
+    #                      '21'))
+
+    plt.xticks(ind, ('T12', 'T13', 'T14', 'T15',
+                     'T16', 'T17', 'T18', 'T19', 'T20'))
+    plt.yticks(np.arange(0, 500, 50))
+    #     plt.yticks(np.arange(0, 3500, 500))
+    plt.legend((p1[0], p3[0]), ('right-censored', 'Suspended'))
 
     plt.show()
+
 
 
 def wiki_dist(*args):
@@ -660,42 +666,43 @@ def early_det(x, y):
     return np.asarray(first_beat)
 
 
-def me_evaluation(N, men_means, men_std, women_means, women_std, child_means, child_std):
-    # N = 5
-    # men_means = (20, 35, 30, 35, 27)
-    # men_std = (2, 3, 4, 1, 2)
+def me_evaluation(N, men_means, women_means):
 
     ind = np.arange(N)  # the x locations for the groups
     width = 0.25  # the width of the bars
 
     fig, ax = plt.subplots()
-    rects1 = ax.bar(ind, child_means, width, color='r', yerr=child_std)
-    rects2 = ax.bar(ind + width, men_means, width, color='y', yerr=men_std)
+#     rects1 = ax.bar(ind, child_means, width, color='r', yerr=child_std)
+#     rects2 = ax.bar(ind, men_means, width, color='y', yerr=men_std)
+    rects2 = ax.bar(ind, men_means, width, color='y')
 
     # women_means = (25, 32, 34, 20, 25)
     # women_std = (3, 5, 2, 3, 3)
-    rects3 = ax.bar(ind + width + width, women_means, width, color='b', yerr=women_std)
+#     rects3 = ax.bar(ind + width, women_means, width, color='b', yerr=women_std)
+    rects3 = ax.bar(ind + width, women_means, width, color='b')
 
     # add some text for labels, title and axes ticks
-    ax.set_ylabel('Early Time Stamps')
+    ax.set_ylabel('Percent of early-detected fraudster')
+    # ax.set_ylabel('Early-detected timestamps')
+    ax.set_xlabel('Sequence length')
     #     ax.set_ylabel('Early Detected Instance Number')
     #     ax.set_title('Early Time Stamps by Groups')
-    #     ax.set_xticks(ind + width / 2)
-    ax.set_xticks(ind + width / 3)
-    ax.set_xticklabels(('T12', 'T13', 'T14', 'T15', 'T16', 'T17', 'T18', 'T19', 'T20'))
+    ax.set_xticks(ind + width/2)
+#     ax.set_xticks(ind + width / 3)
+    ax.set_xticklabels(('12', '13', '14', '15', '16', '17', '18', '19', '20'))
 
     #     ax.legend((rects1[0], rects2[0]), ('SAFD', 'M-LSTM'))
-    ax.legend((rects1[0], rects2[0], rects3[0]), ('Vandal', 'SAFD', 'M-LSTM'))
+    ax.legend((rects2[0], rects3[0]), ('SAFE', 'SAFE-r'))
 
     def autolabel(rects):
         for rect in rects:
             height = rect.get_height()
             ax.text(rect.get_x() + rect.get_width() / 2., height,
                     #             ax.text(rect.get_x() + rect.get_width()/3., 1.05*height,
-                    '%d' % int(height),
+                    '%.2f'%height,
                     ha='center', va='bottom')
 
-    autolabel(rects1)
+#     autolabel(rects1)
     autolabel(rects2)
     autolabel(rects3)
 
