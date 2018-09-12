@@ -12,7 +12,7 @@ The main packages you need to install
 2. tensorflow 1.3.0
 ```
 ## DateSet
-For experiments, we evaluate **SAFE** on two real-world datasets: twitter and wiki which have been attached in twitter/ and wiki/, respectively.
+For experiments, we evaluate **SAFE** on two real-world datasets: twitter and wiki which have been attached in [twitter/](https://github.com/PanpanZheng/SAFE/tree/master/twitter) and [wiki/](https://github.com/PanpanZheng/SAFE/tree/master/wiki), respectively.
 
 ## Model Evaluation
 
