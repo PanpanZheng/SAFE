@@ -55,7 +55,7 @@ The command lines for SAFE and baselines go as follow
 
 ## Reference
 
-I am very glad that you could visit this github and check my research work. If it benefits for your work, please refer this work by
+I am very glad that you could visit this github and check my research work. If it benefits your work, please refer this work by
 .
 
 ## Acknowledgments
