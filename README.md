@@ -12,7 +12,7 @@ The main packages you need to install
 2. tensorflow 1.3.0
 ```
 ## DateSet
-For experiments, we evaluate **SAFE** on two real-world datasets: twitter and wiki which have been attached in location.
+For experiments, we evaluate **SAFE** on two real-world datasets: twitter and wiki which have been attached in folder .
 
 ## Model Evaluation
 
@@ -50,8 +50,8 @@ The command lines for SAFE and baselines go as follow
 
 * **Panpan Zheng** 
 
-    - personal website: https://sites.uark.edu/pzheng/
-    - google scholar: https://scholar.google.com/citations?user=f2OLKMYAAAAJ&hl=en
+    - [personal website](https://sites.uark.edu/pzheng/)
+    - [google scholar](https://scholar.google.com/citations?user=f2OLKMYAAAAJ&hl=en)
 
 ## Reference
 
@@ -60,6 +60,6 @@ I am very glad that you could visit this github and check my research work. If i
 
 ## Acknowledgments
 
-This work was going on underlying the guide of prof. Xintao Wu(my advisor) and Dr. Shuhan Yuan(postdoc in our lab). 
+This work was going on underlying the guide of prof. [Xintao Wu](http://csce.uark.edu/~xintaowu/) and Dr. [Shuhan Yuan](https://sites.uark.edu/sy005/). 
 
-Appreciate it greatly for every labmate in **SAIL lab** in Uni. of Arkansas.
+Appreciate it greatly for every labmate in [**SAIL lab**](https://sail.uark.edu/)
