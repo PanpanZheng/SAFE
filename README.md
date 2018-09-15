@@ -53,9 +53,9 @@ The command lines for SAFE and baselines go as follow
     - [personal website](https://sites.uark.edu/pzheng/)
     - [google scholar](https://scholar.google.com/citations?user=f2OLKMYAAAAJ&hl=en)
 
-## Reference
+## Citation
 
-I am very glad that you could visit this github and check my research work. If it benefits your work, please refer this work by
+I am very glad that you could visit this github and check my research work. If it benefits your work, please cite the paper in Arxiv https://arxiv.org/abs/1809.04683v1
 .
 
 ## Acknowledgments
