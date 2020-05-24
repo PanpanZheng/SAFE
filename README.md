@@ -48,7 +48,7 @@ The command lines for SAFE and baselines go as follow
 
 ## Authors
 
-* **Panpan Zheng, and Shuhan Yuan and Xintao Wu** 
+* **Panpan Zheng, Shuhan Yuan and Xintao Wu** 
 
     - [personal website](https://sites.uark.edu/pzheng/)
     - [google scholar](https://scholar.google.com/citations?user=f2OLKMYAAAAJ&hl=en)
